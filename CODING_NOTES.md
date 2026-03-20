@@ -1,5 +1,6 @@
 ## Deviations
 
+- **Pipeline sub-task 1 wording (“rocket stub”):** The repo implements a **full** rocket (trajectory, hits, terrain, damage, SFX) and also **grenade** (R3). Nothing was stripped back to a stub so later sub-tasks and R2/R3 stay intact.
 - **Shared keyboard layout:** Implemented a hybrid of `DESIGN.md` Part A (Game Designer) and Part B §5.2 (LÖVE UX). Power is on **`Z`/`X` (P1)** and **`I`/`K` (P2)`** instead of UX §5.2’s `W`/`S` vs `Up`/`Down`, to avoid clashes with **jump** and **menu navigation** on `Up`/`Down`.
 - **Gamepad mapping:** Uses **A = jump**, **B = fire** (with **Y = end turn**, **LB/RB = weapon**) for reliable one-press actions across common XInput layouts. `DESIGN.md` mentions **RT fire** in places; triggers are used for **power** only here.
 - **Audio:** No bundled `assets/audio/*.wav` yet. **`src/audio/sfx.lua`** uses short **procedural** beeps (fire / explosion / UI). Drop-in WAV/OGG loading can replace `sfx.init()` internals later without changing call sites.
@@ -8,6 +9,18 @@
 
 - **UX vs Designer controls:** Part A and Part B specify different key bindings for shared keyboard; the merged doc does not pick a single normative table. Implementation follows Designer P1/P2 columns for movement/aim/fire/end, with explicit power keys documented in `README.md`.
 - **Enter as P2 fire (play scene only):** `Return` / `kpenter` now arm grenades/rockets for player 2 during gameplay. If future in-match UI uses Enter to confirm actions, route those keys before `keyboard_mouse.on_keypressed` or narrow the binding.
+
+## Sub-task 1 — session loop, menu, locomotion, aim, rocket (satisfied)
+
+| Ask | Where |
+|-----|--------|
+| `love.load` / `update` / `draw` | `main.lua` → `src/app.lua` (scene stack, letterboxed draw) |
+| Minimal menu | `src/scenes/menu.lua` (+ `match_setup`, `play`, `pause`, `match_end`) |
+| Locomotion + aim | `src/sim/physics.lua`, `src/sim/world.lua`, `src/input/*` |
+| Rocket weapon | `src/sim/weapons/rocket.lua` + `world` projectile integration |
+| Playable | Start match from menu → `play` scene with movement, aim, fire, end turn |
+
+Window **focus**: `love.focus` → `app.focus` mutes `love.audio` when the game loses focus.
 
 ## Sub-task 3 — HUD, polish, turn sync (implemented)
 

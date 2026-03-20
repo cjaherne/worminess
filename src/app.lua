@@ -153,4 +153,8 @@ function app.gamepadreleased(_, _) end
 
 function app.resize(_, _) end
 
+function app.focus(has_focus)
+  love.audio.setVolume(has_focus and 1 or 0)
+end
+
 return app

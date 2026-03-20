@@ -2,6 +2,10 @@
 
 Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.4**.
 
+## Session loop
+
+`main.lua` registers LÖVE callbacks and forwards **`love.load`**, **`love.update`**, and **`love.draw`** to **`src/app.lua`**, which runs the active **scene** (menu → setup → play, etc.) at logical **1280×720** with letterboxing. Audio is muted while the window is unfocused (`love.focus`).
+
 ## Run
 
 1. Install [LÖVE 11.4](https://love2d.org/) (or a compatible 11.x build).

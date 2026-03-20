@@ -58,3 +58,7 @@ end
 function love.resize(w, h)
   app.resize(w, h)
 end
+
+function love.focus(has_focus)
+  app.focus(has_focus)
+end

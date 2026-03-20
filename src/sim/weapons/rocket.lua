@@ -1,3 +1,5 @@
+--- Rocket launcher projectile spawn (baseline weapon path for `world` / R2).
+--- Integrated with terrain sweep + explosion in `sim.world`; tuning in `config.defaults.weapon`.
 local defaults = require("config.defaults")
 
 local M = {}
