@@ -208,7 +208,7 @@ PlayerIntent = {
 | `on_end_turn` + advance + handoff | `M:end_turn(moles, settings)` → `advance_after_turn` (ring step **≥ 1** before picking living mole) → `sync_slots_to_living` |
 | Turn timer | `M:update_timer(dt, moles, settings)` |
 
-**Maintenance checklist:** On end turn, only the **ended** player’s roster advances; `play.lua` / `world.lua` must call `end_turn` with the correct active player context. Weapon numbers live in `config.defaults.lua`; match toggles in `match_settings.lua`.
+**Maintenance checklist:** `M:end_turn` advances the roster for **`active_player`** (the human committing the turn), then flips `active_player` to the opponent — callers must invoke it only when that invariant holds. Weapon numbers live in `config.defaults.lua`; match toggles in `match_settings.lua`.
 
 ---
 
@@ -322,7 +322,8 @@ terrain_gen → (avoid requiring love.* where possible; ok if current code uses 
   "dependencies": ["LÖVE 11.x stock; optional small libs only if justified"],
   "considerations": [
     "Destructible terrain is perf-sensitive; generate once per match",
-    "Turn order and roster advance: Game Designer pseudocode in DESIGN.md is normative",
+    "Merged DESIGN.md: Part A turn pseudocode overrides conflicting pipeline prose",
+    "Turn order and roster advance: implement only from DESIGN.md Part A + turn_state.lua",
     "Single source of truth for weapon tuning: config.defaults + match_settings",
     "Input mode switching must rebuild bindings without restarting app",
     "Session scores are in-memory for v1 unless extended"
@@ -343,7 +344,7 @@ terrain_gen → (avoid requiring love.* where possible; ok if current code uses 
 | R5 | `terrain_gen.lua` + `terrain.lua` |
 | R6 | `session_scores.lua` + `match_end` scene |
 | R7 | spawn 5 moles per player in `play.enter` |
-| R8 | `turn_state.lua` + Designer rules table |
+| R8 | `src/sim/turn_state.lua` — behavior locked to **`DESIGN.md` Part A** turn pseudocode |
 | R9 | `match_setup.lua` → `MatchSettings` |
 | R10 | **`keyboard_mouse.lua`** — shared **one keyboard + one mouse**; turn-owner mouse aim + dual keymaps (`shared_kb` only; see `DESIGN.md` controls) |
 | R11 | `input_manager.lua` + `gamepad.lua` **dual joystick** slot assignment (`dual_gamepad`) |
