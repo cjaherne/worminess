@@ -76,7 +76,7 @@ Cross-reference: every distinct ask from the product brief must be tickable by i
 
 ### High-level pitch
 
-Turn-based **2D artillery** on a **destructible procedural map**. Two human players each command **5 moles** (`roster.new_team`). **Alternating team turns** with one **active mole** per side per turn (`turn_state`). **Aim angle**, **charge power** (`POWER_CHARGE_RATE` in `constants.lua`), **weapon** rocket or grenade. **Terrain** carved by blasts; **moles** integrate position/velocity with **fall damage** thresholds in `constants.lua`. A **round** ends when one team has no living moles (`roster.team_living_count`). A **match** ends when one player reaches **`rounds_to_win`** round wins; then **`session.bump_match_win(winner)`** runs.
+Turn-based **2D artillery** on a **destructible procedural map** (**regenerated at every round start**; see Map regeneration cadence). Two human players each command **5 moles** (`roster.new_team`). **Alternating team turns** with one **active mole** per side per turn (`turn_state`). **Aim angle**, **charge power** (`POWER_CHARGE_RATE` in `constants.lua`), **weapon** rocket or grenade. **Terrain** carved by blasts; **moles** integrate position/velocity with **fall damage** thresholds in `constants.lua`. A **round** ends when one team has no living moles (`roster.team_living_count`). A **match** ends when one player reaches **`rounds_to_win`** round wins; then **`session.bump_match_win(winner)`** runs.
 
 ### Team dynamics
 
@@ -208,6 +208,7 @@ Centralize in orchestrator (`app` or future `input.lua`): `love.keypressed` / `l
 - Cap `dt` with `MAX_DT` in `constants.lua` for stability.
 - **Joystick hot-plug:** refresh device list; UX prompts reassignment.
 - **Explosion + terrain:** batch or throttle heavy mask writes if frame spikes occur.
+- **Per-round mapgen:** `terrain:rebuildImageData()` (or equivalent) after each `generate` may hitch—allow one frame of loading state or spread work if round transitions stutter.
 - **Turn time limit:** if `turn_time_limit` non-nil, auto-end turn policy (e.g. fire at current aim with min power) should be documented in UX copy.
 
 ---
@@ -274,4 +275,4 @@ turn_state.start_match_turn(ts, teams, starting_player, slot1, slot2)
 
 - **BigBoss:** Rocket, grenade, player rotation, mole rotation, 2P local, teams of five, proc maps, match variables, flexible input—covered above and mapped to files.  
 - **UX:** Label session UI so players understand **wins** vs **matches played** per Session stats definition.  
-- **Coder:** When merging with `DESIGN.md`, treat this file's **Session stats definition** as authoritative for `session.lua` semantics.
+- **Coder:** When merging with `DESIGN.md`, treat this file's **Session stats definition** as authoritative for `session.lua` semantics, and **Map regeneration cadence** as authoritative for when `world.mapgen.init.generate` runs and how **rematch + procedural_seed** behave.
