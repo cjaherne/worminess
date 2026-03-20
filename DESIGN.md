@@ -1,3 +1,9 @@
+## Original task (source of truth)
+
+Create a beautifully styled 'moles' clone of the game 'worms' that implements the core game mechanics, including rocket launchers and grenades. The game should support 2 player local mode with procedurally generated maps, keep track of scores of games played since launching, allow teams of 5 moles per player, rotate players and moles each round, and enable players to set match variables like mole health. Additionally, support 2 players on a single keyboard/mouse or with separate controllers.
+
+---
+
 # Moles — Unified DESIGN.md (merged)
 
 **Merged from:** `.pipeline/game-designer-design.md`, `.pipeline/love-architect-design.md`, `.pipeline/love-ux-design.md`  
