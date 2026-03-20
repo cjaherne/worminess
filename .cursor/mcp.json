@@ -18,13 +18,6 @@
       "args": [
         "mcp-server-fetch"
       ]
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
     }
   }
 }

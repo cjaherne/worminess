@@ -1,42 +1,122 @@
 ---
-description: Required output format for BigBoss pipeline plans
+description: Expected structure for Core Code Designer architecture specifications
 alwaysApply: true
 ---
 
 # Output Format
 
-Your output MUST be valid JSON matching this structure:
+Architecture specifications MUST follow this structure. Use concrete TypeScript types and JSON schemas.
 
-```json
-{
-  "stages": [
-    {
-      "name": "stage-name",
-      "parallel": true,
-      "agents": [
-        {
-          "type": "agent-type",
-          "context": {
-            "focus": "specific instructions for this agent"
-          }
-        }
-      ]
-    }
-  ],
-  "reasoning": "Brief explanation of why this plan was chosen"
+## 1. Architecture overview
+
+- System diagram as text (ASCII or Mermaid)
+- Module boundaries and responsibilities
+- Data flow between components
+
+## 2. Data models
+
+- Entity definitions with fields, types, relationships
+- Constraints (unique, required, foreign keys)
+- Indexes for query performance
+
+## 3. API contracts
+
+- Endpoint path, HTTP method
+- Request schema (body, query, params)
+- Response schema with status codes
+- Example request/response JSON
+
+## 4. File/directory structure
+
+- Recommended layout with rationale
+- Module boundaries mapped to directories
+
+## 5. Dependency recommendations
+
+- Required dependencies with rationale
+- Version constraints if relevant
+
+---
+
+## Example: Notification system architecture spec
+
+```markdown
+# Notification System Architecture
+
+## 1. Architecture overview
+
+```
+[Client] <--HTTP/WS--> [API Gateway] <--> [Notification Service]
+                              |
+                              v
+                       [Event Bus] <--> [Delivery Workers]
+                              |
+                              v
+                       [Storage: PostgreSQL + Redis]
+```
+
+- **Notification Service**: Receives events, persists, dispatches
+- **Event Bus**: Decouples producers from delivery workers
+- **Delivery Workers**: Email, push, in-app (WebSocket)
+
+## 2. Data models
+
+```typescript
+interface Notification {
+  id: string;
+  userId: string;
+  type: 'email' | 'push' | 'in_app';
+  channel: string;
+  payload: Record<string, unknown>;
+  status: 'pending' | 'sent' | 'failed';
+  createdAt: Date;
+  sentAt?: Date;
+}
+
+interface NotificationPreference {
+  userId: string;
+  channel: string;
+  enabled: boolean;
 }
 ```
 
-## Field requirements
+## 3. API contracts
 
-- `stages`: ordered array; earlier stages complete before later ones start
-- `stages[].name`: descriptive stage name (e.g. "design", "implement", "validate")
-- `stages[].parallel`: whether agents within this stage can run concurrently
-- `stages[].agents[].type`: must be one of: `ux-designer`, `core-code-designer`, `graphics-designer`, `game-designer`, `love-architect`, `love-ux`, `coding`, `lua-coding`, `testing`, `love-testing`
-- `stages[].agents[].context.focus`: specific, actionable instructions -- not vague
-- `reasoning`: 1-3 sentences explaining the agent selection and ordering
+### POST /api/v1/notifications
 
-## Game vs web tasks
+**Request:**
+```json
+{
+  "userId": "usr_123",
+  "type": "in_app",
+  "channel": "comments",
+  "payload": { "message": "New reply", "postId": "p_456" }
+}
+```
 
-- **LÖVE / Lua game**: Design stage (parallel: true): `game-designer`, `love-architect`, `love-ux`. Coding: `lua-coding`. Validation: `love-testing`. Do not use web designers (`ux-designer`, `core-code-designer`, `graphics-designer`) for LÖVE game design.
-- **Web / UI**: Design: `ux-designer`, `graphics-designer`, `core-code-designer`. Implementation: `coding`. Validation: `testing`.
+**Response 201:**
+```json
+{
+  "id": "notif_789",
+  "status": "pending",
+  "createdAt": "2025-03-15T10:00:00Z"
+}
+```
+
+## 4. File structure
+
+```
+src/
+  notifications/
+    service.ts      # Core orchestration
+    models.ts      # Types/entities
+    api/
+      routes.ts    # HTTP handlers
+    delivery/      # Channel-specific workers
+```
+
+## 5. Dependencies
+
+- `ioredis` — pub/sub for event bus, caching
+- `pg` — PostgreSQL client for persistence
+```
