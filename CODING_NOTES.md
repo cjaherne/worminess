@@ -2,6 +2,7 @@
 
 - **Shared keyboard layout:** Implemented a hybrid of `DESIGN.md` Part A (Game Designer) and Part B §5.2 (LÖVE UX). Power is on **`Z`/`X` (P1)** and **`I`/`K` (P2)`** instead of UX §5.2’s `W`/`S` vs `Up`/`Down`, to avoid clashes with **jump** and **menu navigation** on `Up`/`Down`.
 - **Gamepad mapping:** Uses **A = jump**, **B = fire** (with **Y = end turn**, **LB/RB = weapon**) for reliable one-press actions across common XInput layouts. `DESIGN.md` mentions **RT fire** in places; triggers are used for **power** only here.
+- **Audio:** No bundled `assets/audio/*.wav` yet. **`src/audio/sfx.lua`** uses short **procedural** beeps (fire / explosion / UI). Drop-in WAV/OGG loading can replace `sfx.init()` internals later without changing call sites.
 
 ## Issues Found
 
@@ -15,6 +16,12 @@
 - **Turn rotation:** `world.update` now calls **`turn:sync_slots_to_living`** after HP/death resolution so if the **active mole dies mid-shot**, the roster pointer **rebinds to a living slot** before input/physics (still follows `turn_state` ring advance on **end turn**).
 - **Match setup:** Read-only row **“5 moles per team (fixed for v1)”** documents R7 for players configuring a match.
 
+## Overseer drift closure (menus + SFX + turn toast)
+
+- **Gamepad menus:** `menu`, `match_setup`, `match_end`, and `pause` implement **`gamepadpressed`** plus **`util/gamepad_menu.lua`** (D-pad / left stick + cooldown) in **`update`**. **A** ≈ confirm, **B** ≈ back (setup → title, pause → resume/cancel, results → title). **Match end:** **X** = new setup. **Map seed** row still needs **keyboard** digits.
+- **SFX hooks:** `audio/sfx.lua` + `world` **fire** / **explosion**; **UI blip** on menu confirmations and match actions.
+- **Turn handoff toast (UX §3.6):** **`play`** shows a short **“Next: Player · Mole slot”** banner when turn ownership or active slot changes (not a separate `round_end` scene).
+
 ## Sub-task 2 — terrain, combat, two-player (implemented)
 
 - **Procedural terrain:** `terrain_gen.lua` uses **smoothed columns**, **domain warp**, extra **ridge** detail, and a mild **left/right bias**; **72** retries for valid spawn plateaus.
@@ -25,7 +32,8 @@
 
 ## Suggestions
 
-- Add **gamepad / D-pad navigation** on title, setup, pause, and match end (currently **keyboard-first** menus).
+- Optional full-screen **`round_end` scene** (1–2 s) instead of/in addition to the play toast.
+- Load **real** `assets/audio/*` clips when available; keep procedural fallbacks as default.
 - Add a `keymaps_shared.lua` data table plus optional rebinding UI.
 - Surface **RT-edge fire** on gamepad as an option once input buffering is unified.
 - Cache terrain drawing in a canvas when profiling shows fill-rate limits on large maps.
@@ -38,7 +46,7 @@
 
 | ID | Status |
 |----|--------|
-| R1 presentation | Menus, sky/terrain palette, scaled sprites, expanded HUD (scores/HP/turn), mole & projectile polish |
+| R1 presentation | Above + procedural SFX + gamepad-friendly menus + turn toast |
 | R2 rocket | `src/sim/weapons/rocket.lua` + world integration |
 | R3 grenade | `src/sim/weapons/grenade.lua` + fuse + HUD |
 | R4 2P local | Hotseat play scene, two teams |

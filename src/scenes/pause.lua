@@ -1,17 +1,31 @@
+local gp_nav = require("util.gamepad_menu")
+local sfx = require("audio.sfx")
+
 local M = { id = "pause" }
 
 local focus = 1
 local labels = { "Resume", "How to play", "Forfeit match", "Quit to title" }
 local show_howto = false
 local forfeit_confirm = false
+local gp = {}
 
 function M.enter(_)
   focus = 1
   show_howto = false
   forfeit_confirm = false
+  gp_nav.reset(gp)
 end
 
-function M.update(_, _) end
+function M.update(_, dt)
+  gp_nav.tick_cooldown(gp, dt)
+  if show_howto or forfeit_confirm then return end
+  local dir = gp_nav.poll_nav(gp)
+  if dir == "up" then
+    focus = math.max(1, focus - 1)
+  elseif dir == "down" then
+    focus = math.min(#labels, focus + 1)
+  end
+end
 
 function M.draw(app)
   love.graphics.setColor(0, 0, 0, 0.42)
@@ -30,7 +44,7 @@ function M.draw(app)
   end
   if forfeit_confirm then
     love.graphics.setColor(1, 0.55, 0.45, 1)
-    love.graphics.printf("Press Enter to confirm forfeit (opponent wins)", 400, 470, 480, "center")
+    love.graphics.printf("Press Enter / A to confirm forfeit (opponent wins)", 400, 470, 480, "center")
   end
   if show_howto then
     love.graphics.setColor(0, 0, 0, 0.75)
@@ -47,9 +61,21 @@ function M.draw(app)
       "left"
     )
     love.graphics.setColor(0.75, 0.82, 0.95, 1)
-    love.graphics.printf("Esc / Enter to close", 240, 520, 800, "center")
+    love.graphics.printf("Esc / Enter / A / B to close", 240, 520, 800, "center")
   end
   love.graphics.setColor(1, 1, 1, 1)
+end
+
+local function do_activate(app)
+  if focus == 1 then
+    app.pop()
+  elseif focus == 2 then
+    show_howto = true
+  elseif focus == 3 then
+    forfeit_confirm = true
+  elseif focus == 4 then
+    app.goto("menu")
+  end
 end
 
 function M.keypressed(app, key)
@@ -81,15 +107,40 @@ function M.keypressed(app, key)
   elseif key == "down" or key == "s" then
     focus = math.min(#labels, focus + 1)
   elseif key == "return" or key == "kpenter" then
-    if focus == 1 then
-      app.pop()
-    elseif focus == 2 then
-      show_howto = true
-    elseif focus == 3 then
-      forfeit_confirm = true
-    elseif focus == 4 then
-      app.goto("menu")
+    sfx.ui()
+    do_activate(app)
+  end
+end
+
+function M.gamepadpressed(app, _, button)
+  if show_howto then
+    if button == "a" or button == "b" then
+      show_howto = false
+      sfx.ui()
     end
+    return
+  end
+  if button == "b" then
+    sfx.ui()
+    if forfeit_confirm then
+      forfeit_confirm = false
+    else
+      app.pop()
+    end
+    return
+  end
+  if forfeit_confirm then
+    if button == "a" then
+      local st = app.state
+      local ap = st.world.turn.active_player
+      local win = ap == 1 and 2 or 1
+      app.quit_match_to_results(win, st.settings)
+    end
+    return
+  end
+  if button == "a" then
+    sfx.ui()
+    do_activate(app)
   end
 end
 

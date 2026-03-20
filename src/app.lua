@@ -62,6 +62,8 @@ end
 
 function app.load()
   love.graphics.setDefaultFilter("nearest", "nearest")
+  local sfx = require("audio.sfx")
+  sfx.init()
   app.fonts.title = love.graphics.newFont(40)
   app.fonts.hud = love.graphics.newFont(20)
   app.fonts.small = love.graphics.newFont(17)

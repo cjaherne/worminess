@@ -12,6 +12,10 @@ function M.enter(app, settings)
     world = World.new(settings),
     camera = Camera.new(),
     settings = settings,
+    _prev_ap = nil,
+    _prev_sl = nil,
+    toast_t = 0,
+    toast_msg = nil,
   }
   local w = app.state.world
   app.state.camera.x = w.terrain:width_px() * 0.5
@@ -35,6 +39,15 @@ function M.update(app, dt)
   local intents = app.input:get_intents(w.turn, st.settings)
   w:update(dt, intents, wmx, wmy, use_mouse)
   st.camera:follow(w, dt)
+
+  st.toast_t = math.max(0, (st.toast_t or 0) - dt)
+  local t = w.turn
+  local ap, sl = t.active_player, t.mole_slot[t.active_player]
+  if st._prev_ap ~= nil and (st._prev_ap ~= ap or st._prev_sl ~= sl) then
+    st.toast_msg = string.format("Next: Player %i · Mole slot %i", ap, sl)
+    st.toast_t = 1.65
+  end
+  st._prev_ap, st._prev_sl = ap, sl
 
   if w.won then
     local session_scores = require("data.session_scores")
@@ -75,6 +88,15 @@ function M.draw(app)
   hud.draw_wind_timer(w, app.fonts, app.assets)
   hud.draw_help_strip(app.fonts, st.settings.input_mode)
   hud.draw_roster(w, app.fonts)
+
+  if (st.toast_t or 0) > 0 and st.toast_msg then
+    love.graphics.setColor(0, 0, 0, 0.58)
+    love.graphics.rectangle("fill", 400, 312, 480, 56, 12, 12)
+    love.graphics.setColor(1, 0.96, 0.82, 0.98)
+    love.graphics.setFont(app.fonts.hud)
+    love.graphics.printf(st.toast_msg, 408, 328, 464, "center")
+    love.graphics.setColor(1, 1, 1, 1)
+  end
 
   if w.won then
     love.graphics.setColor(0, 0, 0, 0.35)

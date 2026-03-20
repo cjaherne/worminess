@@ -1,10 +1,13 @@
 local match_settings = require("data.match_settings")
+local gp_nav = require("util.gamepad_menu")
+local sfx = require("audio.sfx")
 
-local M = {}
+local M = { id = "match_setup" }
 
 local draft
 local focus = 1
 local seed_buf = ""
+local gp = {}
 
 local rows = {
   { label = "Roster size", kind = "readonly", text = "5 moles per team (fixed for v1)" },
@@ -22,6 +25,7 @@ function M.enter(app)
   focus = 1
   seed_buf = draft.map_seed and tostring(draft.map_seed) or ""
   app.setup_seed_buffer = seed_buf
+  gp_nav.reset(gp)
 end
 
 local function sync_seed()
@@ -32,7 +36,101 @@ local function sync_seed()
   end
 end
 
-function M.update(_, _) end
+local function cycle_first()
+  local o = { "1", "2", "random" }
+  local cur = draft.first_player
+  local idx = 1
+  for i, v in ipairs(o) do
+    if v == cur then idx = i break end
+  end
+  idx = (idx % #o) + 1
+  draft.first_player = o[idx]
+end
+
+local function cycle_input()
+  draft.input_mode = draft.input_mode == "dual_gamepad" and "shared_kb" or "dual_gamepad"
+end
+
+local function cycle_wind()
+  local o = { "off", "low", "med", "high" }
+  local idx = 1
+  for i, v in ipairs(o) do
+    if v == draft.wind then idx = i break end
+  end
+  idx = (idx % #o) + 1
+  draft.wind = o[idx]
+end
+
+local function nudge_turn_time(delta)
+  local presets = { 0, 30, 60, 90, 120, 180, 300 }
+  local v = draft.turn_time_seconds
+  local best, bi = presets[1], 1
+  for i, p in ipairs(presets) do
+    if math.abs(p - v) < math.abs(best - v) then best, bi = p, i end
+  end
+  bi = math.max(1, math.min(#presets, bi + delta))
+  draft.turn_time_seconds = presets[bi]
+end
+
+local function apply_left(row)
+  if row.kind == "readonly" then return end
+  if row.kind == "step" then
+    draft[row.key] = math.max(row.min, draft[row.key] - row.step)
+  elseif row.kind == "first" then
+    cycle_first()
+  elseif row.kind == "bool" then
+    draft.friendly_fire = not draft.friendly_fire
+  elseif row.kind == "turns" then
+    nudge_turn_time(-1)
+  elseif row.kind == "input" then
+    cycle_input()
+  elseif row.kind == "wind" then
+    cycle_wind()
+  end
+end
+
+local function apply_right(row)
+  if row.kind == "readonly" then return end
+  if row.kind == "step" then
+    draft[row.key] = math.min(row.max, draft[row.key] + row.step)
+  elseif row.kind == "first" then
+    cycle_first()
+  elseif row.kind == "bool" then
+    draft.friendly_fire = not draft.friendly_fire
+  elseif row.kind == "turns" then
+    nudge_turn_time(1)
+  elseif row.kind == "input" then
+    cycle_input()
+  elseif row.kind == "wind" then
+    cycle_wind()
+  end
+end
+
+local function start_match(app)
+  draft = match_settings.validate(draft)
+  sync_seed()
+  draft = match_settings.validate(draft)
+  app.last_match_settings = draft
+  app.goto("play", draft)
+end
+
+function M.update(_, dt)
+  gp_nav.tick_cooldown(gp, dt)
+  local row = rows[focus]
+  if not row then return end
+  local dir = gp_nav.poll_nav(gp)
+  if dir == "up" then
+    focus = math.max(1, focus - 1)
+  elseif dir == "down" then
+    focus = math.min(#rows, focus + 1)
+  elseif dir == "left" then
+    sfx.ui()
+    apply_left(row)
+  elseif dir == "right" then
+    sfx.ui()
+    apply_right(row)
+  end
+end
 
 function M.draw(app)
   local ui = require("ui.hud")
@@ -84,43 +182,13 @@ function M.draw(app)
   end
 
   love.graphics.setColor(0.85, 0.88, 0.92, 1)
-  love.graphics.printf("Enter: start match     Esc: title     Left/Right: change     Up/Down: row     (seed row: type digits, Backspace deletes)", 48, 668, 1180, "center")
-end
-
-local function cycle_first()
-  local o = { "1", "2", "random" }
-  local cur = draft.first_player
-  local idx = 1
-  for i, v in ipairs(o) do
-    if v == cur then idx = i break end
-  end
-  idx = (idx % #o) + 1
-  draft.first_player = o[idx]
-end
-
-local function cycle_input()
-  draft.input_mode = draft.input_mode == "dual_gamepad" and "shared_kb" or "dual_gamepad"
-end
-
-local function cycle_wind()
-  local o = { "off", "low", "med", "high" }
-  local idx = 1
-  for i, v in ipairs(o) do
-    if v == draft.wind then idx = i break end
-  end
-  idx = (idx % #o) + 1
-  draft.wind = o[idx]
-end
-
-local function nudge_turn_time(delta)
-  local presets = { 0, 30, 60, 90, 120, 180, 300 }
-  local v = draft.turn_time_seconds
-  local best, bi = presets[1], 1
-  for i, p in ipairs(presets) do
-    if math.abs(p - v) < math.abs(best - v) then best, bi = p, i end
-  end
-  bi = math.max(1, math.min(#presets, bi + delta))
-  draft.turn_time_seconds = presets[bi]
+  love.graphics.printf(
+    "Enter / A: start   Esc / B: title   Arrows / D-pad: row   Left/Right: value   Seed row: keyboard digits only",
+    48,
+    668,
+    1180,
+    "center"
+  )
 end
 
 function M.keypressed(app, key)
@@ -134,45 +202,26 @@ function M.keypressed(app, key)
   elseif key == "down" or key == "s" then
     focus = math.min(#rows, focus + 1)
   elseif key == "return" or key == "kpenter" then
-    draft = match_settings.validate(draft)
-    sync_seed()
-    draft = match_settings.validate(draft)
-    app.last_match_settings = draft
-    app.goto("play", draft)
+    sfx.ui()
+    start_match(app)
   elseif key == "backspace" and row and row.kind == "seed" then
     seed_buf = seed_buf:sub(1, -2)
   elseif key == "left" or key == "a" then
-    if row.kind == "readonly" then
-      -- no-op
-    elseif row.kind == "step" then
-      draft[row.key] = math.max(row.min, draft[row.key] - row.step)
-    elseif row.kind == "first" then
-      cycle_first()
-    elseif row.kind == "bool" then
-      draft.friendly_fire = not draft.friendly_fire
-    elseif row.kind == "turns" then
-      nudge_turn_time(-1)
-    elseif row.kind == "input" then
-      cycle_input()
-    elseif row.kind == "wind" then
-      cycle_wind()
-    end
+    apply_left(row)
   elseif key == "right" or key == "d" then
-    if row.kind == "readonly" then
-      -- no-op
-    elseif row.kind == "step" then
-      draft[row.key] = math.min(row.max, draft[row.key] + row.step)
-    elseif row.kind == "first" then
-      cycle_first()
-    elseif row.kind == "bool" then
-      draft.friendly_fire = not draft.friendly_fire
-    elseif row.kind == "turns" then
-      nudge_turn_time(1)
-    elseif row.kind == "input" then
-      cycle_input()
-    elseif row.kind == "wind" then
-      cycle_wind()
-    end
+    apply_right(row)
+  end
+end
+
+function M.gamepadpressed(app, _, button)
+  if button == "b" then
+    sfx.ui()
+    app.goto("menu")
+    return
+  end
+  if button == "a" then
+    sfx.ui()
+    start_match(app)
   end
 end
 

@@ -27,11 +27,20 @@ Connect two controllers. **Player 1** uses the first joystick in `love.joystick.
 
 - Left stick: move · **A**: jump · **Right stick**: aim · **Triggers**: power · **B**: fire · **LB/RB**: cycle weapon · **Y**: end turn · **Start**: pause / resume pause menu.
 
+### Menus (any connected gamepad)
+
+Uses the **first** gamepad in `love.joystick.getJoysticks()`: **D-pad** or **left stick** to move focus (with short cooldown), **A** to confirm, **B** to go back (e.g. setup → title, pause → resume, results → title). **Match results:** **X** = new setup.
+
+### Audio
+
+Short **procedural** sounds for weapon fire, explosions, and UI (`src/audio/sfx.lua`). Add files under `assets/audio/` later if you want recorded SFX.
+
 ## HUD (in match)
 
 - **Top left:** whose turn it is, team, active mole **slot**, current mole **HP**, phase hint, optional **turn timer**.
 - **Top right:** **session wins** for P1 / P2 and **draws** (since launch), plus total matches finished.
 - **Lower panels:** weapon selection, aim angle, power; wind readout; **roster** with HP bars and numeric HP per slot (active mole outlined).
+- **Turn handoff:** brief **toast** when the active player or mole slot changes after a turn.
 
 ## Project layout
 
@@ -40,6 +49,8 @@ Connect two controllers. **Player 1** uses the first joystick in `love.joystick.
 - `src/scenes/` — menu, match setup, play, pause, match end.
 - `src/sim/` — terrain, physics, moles, weapons, turn state, world.
 - `src/input/` — shared keyboard/mouse and dual gamepad routing.
+- `src/audio/` — lightweight procedural SFX.
+- `src/util/gamepad_menu.lua` — menu navigation helper.
 - `assets/sprites/` — mole, weapon, and HUD art (see `ASSETS.md`).
 
 ## Requirements

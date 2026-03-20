@@ -1,4 +1,5 @@
 local defaults = require("config.defaults")
+local sfx = require("audio.sfx")
 local damage = require("sim.damage")
 local physics = require("sim.physics")
 local mole_mod = require("sim.mole")
@@ -101,6 +102,7 @@ function M:check_win()
 end
 
 function M:explode_at(px, py, blast, dmg, owner)
+  sfx.explosion()
   damage.explosion(self, px, py, blast, dmg, 420, owner, self.settings.friendly_fire)
   for _ = 1, 18 do
     local a = love.math.random() * math.pi * 2
@@ -184,6 +186,7 @@ function M:try_fire()
   else
     grenade_w.spawn(self, m, self.aim_angle, self.power)
   end
+  sfx.fire()
   self.fired_this_turn = true
   return true
 end

@@ -1,17 +1,46 @@
 local session_scores = require("data.session_scores")
+local gp_nav = require("util.gamepad_menu")
+local sfx = require("audio.sfx")
 
-local M = {}
+local M = { id = "menu" }
 
 local focus = 1
 local labels = { "Play", "Match options", "How to play", "Quit" }
 local show_howto = false
+local gp = {}
 
-function M.enter(app)
-  focus = 1
-  show_howto = false
+local function activate(app)
+  if focus == 1 then
+    if app.last_match_settings then
+      app.goto("play", app.last_match_settings)
+    else
+      app.goto("match_setup")
+    end
+  elseif focus == 2 then
+    app.goto("match_setup")
+  elseif focus == 3 then
+    show_howto = true
+  elseif focus == 4 then
+    love.event.quit()
+  end
 end
 
-function M.update(_, _) end
+function M.enter(_)
+  focus = 1
+  show_howto = false
+  gp_nav.reset(gp)
+end
+
+function M.update(_, dt)
+  gp_nav.tick_cooldown(gp, dt)
+  if show_howto then return end
+  local dir = gp_nav.poll_nav(gp)
+  if dir == "up" then
+    focus = math.max(1, focus - 1)
+  elseif dir == "down" then
+    focus = math.min(#labels, focus + 1)
+  end
+end
 
 function M.draw(app)
   local ui = require("ui.hud")
@@ -52,6 +81,7 @@ function M.draw(app)
 
   love.graphics.setFont(app.fonts.tiny)
   love.graphics.setColor(0.55, 0.58, 0.62, 1)
+  love.graphics.printf("Gamepad: D-pad / stick · A confirm · Start not used here", 400, 600, 480, "center")
   love.graphics.printf("LÖVE 11.4 · local hotseat", 840, 612, 400, "right")
 
   if show_howto then
@@ -75,7 +105,7 @@ Walk, jump, aim, pick rocket or grenade, fire once per turn, then press End turn
 Esc pauses during a match.]]
     love.graphics.printf(txt, 240, 200, 800, "left")
     love.graphics.setColor(0.75, 0.8, 0.9, 1)
-    love.graphics.printf("Press Esc or Enter to close", 240, 540, 800, "center")
+    love.graphics.printf("Press Esc, Enter, A, or B to close", 240, 540, 800, "center")
   end
   love.graphics.setColor(1, 1, 1, 1)
 end
@@ -92,19 +122,22 @@ function M.keypressed(app, key)
   elseif key == "down" or key == "s" then
     focus = math.min(#labels, focus + 1)
   elseif key == "return" or key == "kpenter" or key == "space" then
-    if focus == 1 then
-      if app.last_match_settings then
-        app.goto("play", app.last_match_settings)
-      else
-        app.goto("match_setup")
-      end
-    elseif focus == 2 then
-      app.goto("match_setup")
-    elseif focus == 3 then
-      show_howto = true
-    elseif focus == 4 then
-      love.event.quit()
+    sfx.ui()
+    activate(app)
+  end
+end
+
+function M.gamepadpressed(app, _, button)
+  if show_howto then
+    if button == "a" or button == "b" or button == "x" then
+      show_howto = false
+      sfx.ui()
     end
+    return
+  end
+  if button == "a" then
+    sfx.ui()
+    activate(app)
   end
 end
 

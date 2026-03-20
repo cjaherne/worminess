@@ -1,4 +1,5 @@
 local session_scores = require("data.session_scores")
+local sfx = require("audio.sfx")
 
 local M = { id = "match_end" }
 
@@ -38,16 +39,32 @@ function M.draw(app)
   love.graphics.printf("Map seed used: " .. tostring(seed_label), 260, 250, 760, "center")
   love.graphics.setFont(app.fonts.small)
   love.graphics.setColor(0.75, 0.8, 0.88, 1)
-  love.graphics.printf("Enter: Rematch   S: New setup   Esc: Title", 260, 460, 760, "center")
+  love.graphics.printf("Enter / A: Rematch   S / X: New setup   Esc / B: Title", 260, 460, 760, "center")
   love.graphics.setColor(1, 1, 1, 1)
 end
 
 function M.keypressed(app, key)
   if key == "return" or key == "kpenter" then
+    sfx.ui()
     app.goto("play", args.settings)
   elseif key == "s" then
+    sfx.ui()
     app.goto("match_setup")
   elseif key == "escape" then
+    sfx.ui()
+    app.goto("menu")
+  end
+end
+
+function M.gamepadpressed(app, _, button)
+  if button == "a" then
+    sfx.ui()
+    app.goto("play", args.settings)
+  elseif button == "x" then
+    sfx.ui()
+    app.goto("match_setup")
+  elseif button == "b" then
+    sfx.ui()
     app.goto("menu")
   end
 end
