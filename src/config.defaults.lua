@@ -12,11 +12,16 @@ return {
     rocket_radius = 3,
     rocket_blast = 52,
     rocket_damage = 58,
+    --- Fraction of world gravity applied each step (DESIGN: mild gravity on rocket trajectory)
+    rocket_gravity_mul = 0.2,
+    rocket_ray_steps = 56,
     grenade_speed_mul = 1.15,
     grenade_fuse = 4.0,
     grenade_blast = 60,
     grenade_damage = 52,
     grenade_bounce = 0.55,
+    --- After a bounce, nudge out of terrain so the grenade doesn’t tunnel in solid cells
+    grenade_unstick_px = 3,
   },
   wind_force = { low = 28, med = 55, high = 95 },
   colors = {

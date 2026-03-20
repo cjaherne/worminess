@@ -6,6 +6,15 @@
 ## Issues Found
 
 - **UX vs Designer controls:** Part A and Part B specify different key bindings for shared keyboard; the merged doc does not pick a single normative table. Implementation follows Designer P1/P2 columns for movement/aim/fire/end, with explicit power keys documented in `README.md`.
+- **Enter as P2 fire (play scene only):** `Return` / `kpenter` now arm grenades/rockets for player 2 during gameplay. If future in-match UI uses Enter to confirm actions, route those keys before `keyboard_mouse.on_keypressed` or narrow the binding.
+
+## Sub-task 2 — terrain, combat, two-player (implemented)
+
+- **Procedural terrain:** `terrain_gen.lua` uses **smoothed columns**, **domain warp**, extra **ridge** detail, and a mild **left/right bias**; **72** retries for valid spawn plateaus.
+- **Rocket:** **Gravity-scaled trajectory** (`rocket_gravity_mul`) and finer **swept collision** (`rocket_ray_steps`).
+- **Grenade:** **Post-bounce unstick** (`grenade_unstick_px`) to reduce embedding in solid terrain after bounces.
+- **Wind:** Uses **`built.seed_used`** so direction is tied to the map that was actually generated.
+- **Local 2P:** Existing **hotseat + dual bindings + gamepads**; P2 fire widened to **`;` / Enter / RCtrl** per design alternatives.
 
 ## Suggestions
 

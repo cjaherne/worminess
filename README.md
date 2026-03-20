@@ -19,7 +19,7 @@ On Windows, you can drag the project folder onto `love.exe` or set `love` on you
 
 - **Mouse** (active player only): aim; **left click** fires.
 - **Player 1:** `A`/`D` move, `W` jump, `Q`/`E` aim, `Z`/`X` power, `F` fire, `G` end turn, `1`/`2` rocket/grenade, `Tab` cycle weapon.
-- **Player 2:** arrows move, `Up`/`Right Shift` jump, `[` / `]` aim, `I`/`K` power, `;` fire, `Backspace` or `\` end turn, `,` / `.` weapons, `-`/`=` cycle weapon.
+- **Player 2:** arrows move, `Up`/`Right Shift` jump, `[` / `]` aim, `I`/`K` power, `;` / `Enter` / numpad `Enter` / `Right Ctrl` fire, `Backspace` or `\` end turn, `,` / `.` weapons, `-`/`=` cycle weapon.
 
 ### Two gamepads (Match setup → input mode)
 

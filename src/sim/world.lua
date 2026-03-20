@@ -18,17 +18,18 @@ local function team_alive(moles, player)
   return false
 end
 
-local function wind_vx(settings)
+local function wind_vx(settings, terrain_seed_used)
   local w = settings.wind or "off"
   local f = defaults.wind_force
   if w == "off" then return 0 end
   local mag = (w == "high" and f.high) or (w == "med" and f.med) or f.low
-  return (settings.map_seed or 1) % 2 == 0 and mag or -mag
+  local salt = terrain_seed_used or settings.map_seed or 1
+  return salt % 2 == 0 and mag or -mag
 end
 
 local function rocket_segment_hit(world, ox, oy, nx, ny, owner)
   local tr = world.terrain
-  local steps = 28
+  local steps = defaults.weapon.rocket_ray_steps or 56
   for i = 1, steps do
     local t = i / steps
     local px = ox + (nx - ox) * t
@@ -80,7 +81,7 @@ function M.new(settings)
     fired_this_turn = false,
     won = false,
     winner = 0,
-    wind_vx = wind_vx(settings),
+    wind_vx = wind_vx(settings, built.seed_used),
     match_time = 0,
   }, M)
   self.turn:sync_slots_to_living(self.moles)
@@ -138,6 +139,8 @@ function M:integrate_projectiles(dt)
       table.remove(self.projectiles, i)
     elseif pr.kind == "rocket" then
       local ox, oy = pr.x, pr.y
+      local rg = wdef.rocket_gravity_mul or 0.2
+      pr.vy = pr.vy + g * rg * dt
       pr.x = pr.x + pr.vx * dt + self.wind_vx * dt * 0.12
       pr.y = pr.y + pr.vy * dt
       local hx, hy = rocket_segment_hit(self, ox, oy, pr.x, pr.y, pr.owner)
@@ -158,6 +161,11 @@ function M:integrate_projectiles(dt)
         pr.x, pr.y = ox, oy
         pr.vy = -pr.vy * wdef.grenade_bounce
         pr.vx = pr.vx * wdef.grenade_bounce
+        local unst = wdef.grenade_unstick_px or 3
+        for _ = 1, 10 do
+          if not tr:is_solid_px(pr.x, pr.y) then break end
+          pr.y = pr.y - unst
+        end
       end
       if pr.fuse <= 0 then
         self:explode_at(pr.x, pr.y, wdef.grenade_blast, wdef.grenade_damage, pr.owner)

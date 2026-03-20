@@ -73,7 +73,7 @@ function M.on_keypressed(input, key, scancode)
     input.consume_end_p2 = true
   elseif scancode == "f" then
     input.consume_fire_p1 = true
-  elseif scancode == "semicolon" then
+  elseif scancode == "semicolon" or scancode == "rctrl" or scancode == "return" or scancode == "kpenter" then
     input.consume_fire_p2 = true
   elseif scancode == "tab" then
     input.consume_key_cycle_p1 = true

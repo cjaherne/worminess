@@ -133,7 +133,7 @@ function M.draw_help_strip(fonts, input_mode)
   love.graphics.setColor(0.88, 0.9, 0.93, 1)
   local msg = (input_mode == "dual_gamepad")
       and "Gamepads: left stick move · A jump · right stick aim · triggers power · B fire · LB/RB weapon · Y end turn · Start pause"
-    or "Shared KB: P1 WASD Q/E aim Z/X power F fire G end 1/2 weapon · P2 arrows [ ] aim I/K power ; fire Backspace end , . weapon · mouse aims active player only"
+    or "Shared KB: P1 WASD Q/E aim Z/X power F fire G end 1/2 weapon · P2 arrows [ ] aim I/K power ; Enter R-Ctrl fire Backspace end , . weapon · mouse aims active player only"
   love.graphics.printf(msg, 36, 548, 1208, "center")
   love.graphics.setColor(1, 1, 1, 1)
 end
