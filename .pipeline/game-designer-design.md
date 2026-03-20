@@ -257,11 +257,14 @@ on_match_winner_decided(winner_player_index):
   session:bump_match_win(winner_player_index)  -- increments scores[winner] AND matches_completed by 1
 ```
 
-**Round start (rotation):**
+**Round start (map + rotation + turn):**
 
 ```
+seed = derive_seed(match_config.procedural_seed, round_index)  -- or random if procedural_seed nil
+world_state = world.mapgen.init.generate(match_config, seed)
 starting_player = ((round_index - 1) % 2) + 1
 for each team: team.mole_order = roster.rotate_order(team.mole_order)
+-- rebuild teams/moles at new spawns, full HP from match_config.mole_max_hp
 turn_state.start_match_turn(ts, teams, starting_player, slot1, slot2)
 ```
 

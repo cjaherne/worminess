@@ -2,11 +2,12 @@
 
 ## Summary
 
-Reading the current UX design doc and codebase to reconcile scene IDs and restore any truncated sections.
+Reading `DESIGN.md` and `.pipeline/love-ux-design.md` to fix section references and align with the merged design.
 
 
 
 
+Updating `.pipeline/love-ux-design.md`: adding a canonical handoff section with `DESIGN.md` anchors, replacing fragile § cross-refs, and aligning the controls example with the merged `DESIGN.md`.
 
 
 
@@ -17,7 +18,6 @@ Reading the current UX design doc and codebase to reconcile scene IDs and restor
 
 
 
-Updating `.pipeline/love-ux-design.md`: aligning with the codebase and love-architect scene names (`play`, `game_over`, etc.), binding view-models to `session.lua`, `match_config.lua`, and `turn_state.lua`, and adding a reconciliation section.
 
 
 
@@ -32,74 +32,32 @@ Updating `.pipeline/love-ux-design.md`: aligning with the codebase and love-arch
 
 
 
+## Updates to `.pipeline/love-ux-design.md`
 
+### 1. **Handoff block (after codebase note)**
+- Maps topics to **named sections in repo-root `DESIGN.md`**: **MatchConfig — single consolidated schema**, **Session stats definition**, **UX — scene graph & wireframes → `match_setup` (dual column)**, **requirementsChecklist — UX**.
+- States explicitly that **`.pipeline/love-ux-design.md`** stays **canonical** for full wireframes (§5), widget/copy table (§3.2), §6–7, and §10 JSON when `DESIGN.md` is short; **conflict order:** `DESIGN.md` (MatchConfig + session rules) → `src/game/*.lua`.
 
+### 2. **Replaced fragile / legacy cross-refs**
+- `match_setup` row: no longer “see §3”; it points to **`DESIGN.md` MatchConfig table** + **`match_setup` (dual column)** + **§5.3** for pixels.
+- `game_over` row: **`DESIGN.md` Session stats** + **§9** (this file).
+- Transitions: **§10** + **`DESIGN.md` UX JSON**.
+- **§3.1 Session:** tied to **`DESIGN.md` — Session stats definition**; copy clarifies **wins vs matches played**.
+- **§3.2 Match config:** states **`DESIGN.md` MatchConfig** is the **authoritative** field list; §3.2 only adds **widget/copy** columns.
+- **§3.3 / §6:** round tallies vs session fields clarified via **`DESIGN.md` Session stats definition**.
+- **§5.3:** line at top linking **`DESIGN.md` `match_setup` (dual column)** to this pixel spec.
+- **§6.2:** examples aligned with **merged `DESIGN.md` — Controls** (A/D, W/S, Shift, Space, 1/2); cites **`src/input/bindings.lua`** as the real source when it exists.
+- **§6.3:** pause cross-ref ties **§5.5** to **`DESIGN.md` UX checklist**.
+- **§1.1:** “see §4” → **§4 — Component breakdown (below)**.
+- **§1.2 heading:** renamed to **architect (`src/scenes/`)** (no `.pipeline` file name).
 
+### 3. **Component table**
+- `screens.*` renamed to **`compose/*`** to match the file tree in §2.
 
+---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Done
-
-Updated **`.pipeline/love-ux-design.md`** so it matches the **real repo** and **love-architect** scenes, and fixed the JSON fence (there was an **extra trailing ` ``` `** after §10).
-
-### Reconciliation (scene IDs)
-
-| Earlier UX label | Canonical (architect / `src/scenes/`) |
-|------------------|----------------------------------------|
-| `playing` | **`play`** |
-| `match_summary` | **`game_over`** with variants **`round_end`** / **`match_end`** |
-| `title` | **Title splash** inside **`boot`** or first paint of **`main_menu`** (documented; no orphan scene) |
-| `round_interstitial` | **Toast / HUD overlay** while **`play`** is top, driven by **`turn_state.phase`** (`interstitial`, `round_end`) |
-
-### Codebase alignment
-
-- **`conf.lua`** / **`constants.lua`**: 1280×720 noted as already aligned.
-- **§3** now maps UI to **`session.lua`** (`scores`, `matches_completed`, `last_match_config`, `bump_match_win`), **`match_config.lua`** (all validated fields + `input_scheme`), **`turn_state.lua`** (`phase`, `active_player`, `active_mole_slot`, weapons, move budget, etc.), plus **`roster`** / mole HP.
-- **`match_setup`**: expanded for **rounds to win**, **wind**, **fuse**, **turn timer**, **friendly fire**, **`shared_kb` / `dual_gamepad`**, and **dual Ready** chips per product brief.
-- **§2**: `src/scenes/` + thin **`src/ui/compose/*`** and **`play_hud.lua`** (renamed from `playing_hud`).
-- **§10 JSON**: `userFlows`, `wireframes`, and `interactions` use architect scene names; **`gameOverVariants`** added.
-- **§11**: celebration target corrected to **`game_over (match_end)`**.
-
-If you want **`src/app.lua`** mentioned only when it exists in-tree, we can soften that line—but it already matches your **`main.lua`** contract.
+Per instructions, **`DESIGN.md` was not edited** (design output stays under `.pipeline/`). If the orchestrator wants **`DESIGN.md` line 52** (“see love-ux §3.1”) updated to “**Session stats definition** (above) and **`.pipeline/love-ux-design.md` §3.1**”, that can be a separate merge edit.
 
 ## Files Created/Modified
+- .pipeline/game-designer-design.md
 - .pipeline/love-ux-design.md
