@@ -12,6 +12,10 @@ love .
 
 Install LÖVE: [https://love2d.org/](https://love2d.org/)
 
+## Tests
+
+Unit tests use **busted** (LuaJIT + LuaRocks). From the project root run `busted`. See [TESTING.md](TESTING.md) for setup on Windows (compiler for native LuaRocks deps) and details.
+
 ## Flow
 
 1. **Boot** → **Main menu** → **Match setup** (all `MatchConfig` fields, dual **Ready**, validate).

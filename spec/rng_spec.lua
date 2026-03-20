@@ -1,0 +1,15 @@
+local rng = require("core.rng")
+
+describe("core.rng", function()
+  it("seed and random are deterministic", function()
+    local r = rng.new(12345)
+    assert.equals(96617, r:random(1, 1000000))
+    r:seed(12345)
+    assert.equals(96617, r:random(1, 1000000))
+  end)
+
+  it("handles seed 0 by normalizing", function()
+    local r = rng.new(0)
+    assert.is_true(r:random() >= 0 and r:random() < 1)
+  end)
+end)
