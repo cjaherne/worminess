@@ -1,3 +1,19 @@
+## Original task (source of truth)
+
+Plan and fix the broken build due to missing module 'config.defaults'.
+
+---
+
+
+## Requirements traceability
+
+Numbered requirements extracted from the user task: **[REQUIREMENTS.md](./REQUIREMENTS.md)**. Implementation must satisfy each item or document deferral in **CODING_NOTES.md**.
+
+<!-- requirements-traceability-linked -->
+
+---
+
+
 # DESIGN — Fix `config.defaults` module resolution & release integration
 
 **Scope:** This document is the normative blueprint for the Coding Agent task: restore a working runtime and test load path for the **`config.defaults`** Lua module, and align automated checks with the on-disk layout. It builds on the existing LÖVE 11.4 project (`main.lua` → `src/app.lua`, `love.filesystem.setRequirePath` in `main.lua`).
