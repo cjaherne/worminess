@@ -6,17 +6,17 @@
         "/workspace"
       ]
     },
-    "github": {
-      "command": "mcp-server-github",
-      "args": [],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
     "fetch": {
       "command": "uvx",
       "args": [
         "mcp-server-fetch"
+      ]
+    },
+    "openai-sprite-mcp": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\Chris\\none-of-them-knew-they-were-robots\\packages\\openai-sprite-mcp\\dist\\index.js",
+        "C:\\Users\\Chris\\Documents\\GitHub\\worminess"
       ]
     }
   }
