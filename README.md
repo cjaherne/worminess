@@ -2,7 +2,7 @@
 
 Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.4**. Each team fields **five** moles; players alternate each turn, and the active **mole slot** advances so everyone gets a turn before the roster repeats.
 
-**Version:** see `package.json` (`version` field). Automated checks: `npm run build` from the repo root (verifies core files are present).
+**Version:** see `package.json` (`version` field). **`npm run build`** (repo root) runs a small release check that confirms core LÖVE entry files exist, including **`src/config/defaults.lua`** — that file is what Lua loads when the game and tests call `require("config.defaults")` (dots map to nested folders under `src/`, not a flat `config.defaults.lua` at the top of `src/`).
 
 ## Session loop
 
@@ -66,6 +66,7 @@ Short **procedural** sounds for weapon fire, explosions, and UI (`src/audio/sfx.
 ## Project layout
 
 - `main.lua` / `conf.lua` — entry and window (1280×720 logical, resizable).
+- `src/config/defaults.lua` — shared tuning (physics, weapons, wind, team colors); required by sim, render, and HUD as `require("config.defaults")`.
 - `src/app.lua` — scene stack, assets, lifecycle.
 - `src/scenes/` — menu, match setup, play, pause, match end.
 - `src/sim/` — terrain, physics, moles, weapons, turn state, world.
