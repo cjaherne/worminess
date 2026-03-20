@@ -2,7 +2,7 @@
 
 ## Summary
 
-Reviewing `.pipeline/love-ux-design.md` and key sim modules so we can produce a complete, self-contained UX spec in `.pipeline/love-ux-design.md` (per pipeline rules we won't edit `DESIGN.md`).
+Aligning `.pipeline/love-ux-design.md` with the implemented UI, input, and assets. Reading key source files.
 
 
 
@@ -12,7 +12,6 @@ Reviewing `.pipeline/love-ux-design.md` and key sim modules so we can produce a 
 
 
 
-Updating `.pipeline/love-ux-design.md`: fixing paths (`src/config.defaults.lua`), aligning the turn/HUD contract with `src/sim/turn_state.lua`, enriching wireframes with element inventories, expanding flows (pause/forfeit/rematch) and menu navigation, and adding a merge appendix for `DESIGN.md`.
 
 
 
@@ -22,23 +21,38 @@ Updating `.pipeline/love-ux-design.md`: fixing paths (`src/config.defaults.lua`)
 
 
 
-## Update complete
 
-Per pipeline rules, only **`.pipeline/love-ux-design.md`** was changed (not root `DESIGN.md`). The UX spec is expanded so an orchestrator can paste it into `DESIGN.md` **without losing content**.
 
-### Changes
 
-- **§0 — Repo alignment:** Uses **`src/config.defaults.lua`** (not `config/defaults.lua`); adds **`src/sim/turn_state.lua`**, **`terrain_gen.lua`**, and brief UX notes for **`terrain` / `damage` / `physics`**.
-- **§1.3 — `TurnView`:** Matches **`turn_state`** (`active_player`, `mole_slot`, `turn_time_left`, phases); **`CombatHudView`** mentions live grenade fuse vs **`weapon.grenade_fuse`** from defaults.
-- **§3 — Wireframes:** **Element inventories** under title, setup, and gameplay HUD so layouts are explicit.
-- **§4 — Flows:** Turn timer behavior, **pause**, **forfeit + confirm**, **rematch / new setup / title**, dual-pad warning, and a **mermaid** state diagram.
-- **§5 — Input:** **§5.5** menu/setup gamepad navigation (confirm/back, defaults).
-- **§6 — Accessibility:** Slightly expanded in-world / optional damage numbers note.
-- **§8 — Components:** Adds **`TurnTimerReadout`**, **`WindReadout`**, **`ConfirmDialog`**, **`LoadingBanner`**.
-- **§10:** Correct **`require("config.defaults")`** for team colors.
-- **§13 — Merge checklist:** Tells the orchestrator exactly which sections must land in **`DESIGN.md`** so the merged doc stays **self-contained** (addresses overseer feedback without editing `DESIGN.md` from this agent).
 
-Opening note now states that **§2–§8**, **§11**, and **§12** are the primary block to merge under something like **`## LÖVE UX — Screens, HUD, flows, and input`**.
+
+
+
+
+
+
+
+Rewriting `.pipeline/love-ux-design.md` to match the implemented UI (`src/ui/hud.lua`, scenes, input) and asset manifest, while preserving merge-ready flows, input §5–6, and the component list.
+
+
+
+
+## Summary
+
+**Updated only** `.pipeline/love-ux-design.md` (per pipeline rules, **not** `DESIGN.md`). The doc now matches the **current game build** and stays merge-ready for the orchestrator.
+
+### What changed
+
+- **§0 / §1:** Points at real modules: `src/app.lua`, `src/ui/hud.lua`, `src/scenes/*.lua`, `src/util/viewport.lua`, `src/util/gamepad_menu.lua`, `src/input/*`, `ASSETS.md`, and where **`session_scores.record_match_outcome`** runs (play win vs forfeit).
+- **§3 Wireframes:** **Measured regions** from `hud.lua` / `menu.lua` / `match_setup.lua` / `play.lua` / `pause.lua` / `match_end.lua` (e.g. turn banner `20,10,600,96`, weapon panel `20,114,328,200`, help strip `24,532,1232,64`, roster `20,604,1240,108`, toast `400,312,480,56`). **Match setup** is documented as the **single vertical list** (not the older two-column concept), with optional polish called out.
+- **§4 Flows:** Includes **Start-button pause** via `app.gamepadpressed`, **forfeit confirm** in `pause.lua`, **match_end** actions (**S** / **X** for new setup), and **mermaid** state diagram.
+- **§5 Input:** Tables match **`keyboard_mouse.lua`** and **`gamepad.lua`** (e.g. P1 **F** fire, **W/Space** jump; P2 **; / RCtrl / Enter / kpenter** fire; **20%** stick deadzone; mouse **left** = fire for active player).
+- **§6–§8:** Accessibility, file tree, and **component → code** mapping (`draw_turn_banner`, `draw_help_strip`, etc.).
+- **§11 JSON:** Regions and flows updated to the implementation.
+
+The header **merge note** tells the orchestrator to copy **§2–§8**, **§11**, and **§12** into `DESIGN.md` so the merged doc stays self-contained (title/setup/HUD/pause/results, flows, input, accessibility, components).
 
 ## Files Created/Modified
+- .pipeline/game-designer-design.md
+- .pipeline/love-architect-design.md
 - .pipeline/love-ux-design.md
