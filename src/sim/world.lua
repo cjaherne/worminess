@@ -213,7 +213,9 @@ function M:update(dt, intents, cam_mx, cam_my, use_mouse_aim)
   for _, m in ipairs(self.moles) do
     if m.alive then
       if active and m == active and intent and #self.projectiles == 0 then
-        if use_mouse_aim and cam_mx and cam_my then
+        if intent._use_absolute_aim and intent._aim_absolute then
+          self.aim_angle = intent._aim_absolute
+        elseif use_mouse_aim and cam_mx and cam_my then
           self.aim_angle = vec2.angle_to(cam_mx - m.x, cam_my - m.y)
         end
         local ang = self.aim_angle
@@ -226,6 +228,12 @@ function M:update(dt, intents, cam_mx, cam_my, use_mouse_aim)
         end
         if intent.cycle_weapon then
           self.weapon_index = 3 - self.weapon_index
+        end
+        if intent.fire_pressed then
+          self:try_fire()
+        end
+        if intent.end_turn_pressed then
+          self:try_end_turn()
         end
         physics.update_mole(m, self.terrain, dt, intent.move_x or 0, intent.jump, defaults.gravity)
       else

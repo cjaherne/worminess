@@ -23,6 +23,10 @@ function love.keyreleased(key, scancode)
   app.keyreleased(key, scancode)
 end
 
+function love.textinput(t)
+  app.textinput(t)
+end
+
 function love.mousemoved(x, y, dx, dy, istouch)
   app.mousemoved(x, y, dx, dy, istouch)
 end
