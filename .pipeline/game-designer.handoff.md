@@ -2,7 +2,17 @@
 
 ## Summary
 
-Reading the codebase to align the design with implemented modules and updating `.pipeline/game-designer-design.md`, including an explicit session-stats definition per overseer feedback.
+Reading `.pipeline/game-designer-design.md` and updating it with a definitive map-regeneration cadence and `mapgen.generate` timing (including rematch/seed).
+
+
+
+
+
+
+
+
+
+Adding an authoritative **map regeneration cadence** section and updating the checklist, procedural-map mechanics, `gameLoop`, pseudocode, and handoff notes.
 
 
 
@@ -17,32 +27,21 @@ Reading the codebase to align the design with implemented modules and updating `
 
 
 
+## Done
 
+Updated **`.pipeline/game-designer-design.md`** with an Overseer block **Map regeneration cadence (default)** and aligned the checklist, high-level mechanics, procedural-map section, `gameLoop`, pseudocode, `implementationOrder`, considerations, and handoff.
 
+### Decisions captured
 
+| Topic | Spec |
+|--------|------|
+| **Default cadence** | **Per round** — new terrain every round. |
+| **When `world.mapgen.init.generate` runs** | **Once per round**, in **round setup**: after the previous round is decided / interstitial advances, **before** mole placement for that round. **Round 1** uses the same path (first match entry = first round setup). **No** match-only shortcut and **no** carrying the old terrain into the next round. |
+| **`procedural_seed` nil** | New **random** seed **each** call → each round (and rematch) gets new layouts. |
+| **`procedural_seed` set** | Deterministic **`f(seed, round_index)`** so rounds differ but replay is stable; **Rematch** with the same saved config repeats the **same terrain sequence** (round *k* matches the earlier match’s round *k*). |
+| **Module** | Points to **`src/world/mapgen/init.lua`** / require **`world.mapgen.init`**. |
 
-
-Updating `.pipeline/game-designer-design.md` to align with the implemented `src/` layout and adding the overseer's one-sentence session-stats definition.
-
-
-
-
-## Update complete
-
-`.pipeline/game-designer-design.md` is rewritten to **match the real tree** (`conf.lua`, `main.lua`, `src/bootstrap.lua`, `src/game/*`, `src/data/*`, `src/entities/*`, `src/world/*`, `src/world/mapgen/*`, `src/core/*`) and to **drop** the old “no sources yet” note.
-
-### Overseer ask — session stats (one explicit sentence)
-
-Added a dedicated **“Session stats definition”** block with a single binding sentence for coders: **`scores[1]`/`scores[2]` = match wins since launch (not rounds, not per-player “games played”); `matches_completed` = number of fully finished matches in the session; don’t repurpose these fields for round tallies without renaming and fixing UI copy.** That matches what `src/game/session.lua` already does with `bump_match_win`.
-
-### Everything else
-
-- **requirementsChecklist** still tracks each original-task bullet (including beautiful styling, proc maps, 5 moles, rotations, input modes).
-- **mechanics / controls / gameLoop** are tied to **`turn_state`**, **`roster`**, **`match_config`**, **`weapons.lua`**, **`constants.lua`**, and **mapgen**.
-- **implementationOrder** is a **delta** from the current codebase (orchestrator/input/UI first, not “terrain stub from zero”).
-- **`main.lua` → `app`** is noted; `app.lua` wasn’t in the glob—called out as likely Architect-owned.
-
-No implementation files were added or changed—only `.pipeline/game-designer-design.md`.
+No `.lua` or other implementation files were changed—design doc only.
 
 ## Files Created/Modified
 - .pipeline/game-designer-design.md
