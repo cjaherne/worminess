@@ -2,7 +2,7 @@
 
 **Audience:** merge into `DESIGN.md` + Coding Agent blueprint  
 **Framework:** LÖVE **11.4**  
-**Repo baseline:** `REQUIREMENTS.md` (R1–R11); entry via `main.lua` → `app`; data `src/data/match_settings.lua`, `src/data/session_scores.lua` (R6); sim layer `src/sim/turn_state.lua`, `terrain.lua`, `terrain_gen.lua`, `physics.lua`, `damage.lua`; tuning `src/config.defaults.lua`. Full merged spec: root `DESIGN.md`.
+**Repo baseline (implemented):** `REQUIREMENTS.md` (R1–R11) · `CODING_NOTES.md` (UX/designer drift + env notes) · `ASSETS.md` (sprite scale manifest) · `README.md` (player-facing controls). Entry `main.lua` → `src/app.lua` (scene stack). **Sim:** `src/sim/world.lua`, `mole.lua`, `turn_state.lua`, `terrain.lua`, `terrain_gen.lua`, `physics.lua`, `damage.lua`, `src/sim/weapons/{registry,rocket,grenade}.lua`. **Flow:** `src/scenes/{menu,match_setup,play,pause,match_end}.lua`. **Input:** `src/input/{input_manager,keyboard_mouse,gamepad}.lua`. **Presentation:** `src/render/{camera,terrain_draw,mole_draw}.lua`, `src/ui/hud.lua`, `src/audio/sfx.lua`. **Data:** `src/data/match_settings.lua`, `session_scores.lua` · **Tuning:** `src/config.defaults.lua`. Merged umbrella spec: root `DESIGN.md`.
 
 ---
 
@@ -20,7 +20,7 @@ Traceability: one bullet per distinct requirement from the user task and BigBoss
 - [ ] **R-session-score**: **Scores for games played since app launch** tracked (session-only persistence per REQUIREMENTS; reset on quit).
 - [ ] **R-team-size**: Each human controls a **team of 5 moles**.
 - [ ] **R-rotate-turns**: **Players alternate turns** each “turn” (standard Worms cadence: one team acts, then the other).
-- [ ] **R-rotate-moles**: **Moles rotate** as the active character: when a player’s turn comes around again, control advances to the **next living mole** in a fixed team order (dead moles skipped).
+- [ ] **R-rotate-moles**: **Moles rotate** per roster slot: when a player **ends their turn**, **that player’s** slot pointer advances to the **next living mole** in fixed order 1..5 (ring, skip dead) — symmetric same-slot pacing with the opponent; see **Turn model** pseudocode.
 - [ ] **R-match-vars**: **Match options** exposed before play (at minimum **mole max health / starting health**; room for more toggles without contradicting scope).
 - [ ] **R-input-shared-kbm**: **Two players on one keyboard + mouse**: viable control scheme with clear ownership of input per active turn.
 - [ ] **R-input-dual-pad**: **Two players with separate controllers** (gamepads): each player mapped to their own device where possible.
@@ -49,6 +49,10 @@ Traceability: one bullet per distinct requirement from the user task and BigBoss
 ### Turn model (players + moles rotation)
 
 **Normative rule:** The **`on_end_turn` / `advance_mole_index` pseudocode block below is authoritative** for turn and mole rotation. Any prose in other pipeline docs (e.g. LÖVE Architect) that implies advancing the **opponent’s** roster when a turn ends, or advancing a roster when a turn **starts**, is **out of date** — implement the pseudocode. **Where merged architecture prose (e.g. `DESIGN.md`, LÖVE Architect) disagrees with this Turn Model, this pseudocode overrides it for player/mole rotation; align `src/sim/turn_state.lua` (and callers) to the pseudocode, not the conflicting paragraph.**
+
+**One-line precedence:** *Turn Model pseudocode overrides conflicting architecture prose whenever they disagree on player/mole rotation.*
+
+**Code alignment:** `src/sim/turn_state.lua` is written to this model (`advance_after_turn` / `end_turn`); `world.lua` should keep calling `sync_slots_to_living` after damage/death so the active slot never points at a dead mole mid-turn (see `CODING_NOTES.md`).
 
 **Product intent — symmetric same-slot progression:** Each human alternates as **turn owner**. Each player’s **roster slot index** (1..5) advances **only when that player ends their own turn**, so after a full **player–player cycle** (P1 acts, then P2 acts), **both** teams have stepped forward one **living** mole in lockstep when no asymmetrical deaths have occurred — i.e. both sides stay on the **same slot number** relative to their rosters (both on “slot 2” for their next respective turns, etc.). Deaths desync indices by skipping dead moles per `advance_mole_index`.
 
@@ -91,6 +95,8 @@ advance_mole_index(p):
 | Rocket launcher | Straight or mild gravity-affected raycast/segment motion | On impact with terrain or mole | Strong carve | Medium | Fast, thin **silhouette**; optional short **trail** for readability |
 | Grenade       | Parabolic under gravity | **Fuse timer** (e.g. 3–5 s) or **impact** (choose one default: **timer** is classic); optional low bounce | Medium carve | Medium-large | Round **silhouette**; **blinking fuse** or color pulse for telegraph |
 
+**Tuning source of truth (shipped):** numeric weapon behavior (`rocket_speed`, `rocket_gravity_mul`, `rocket_ray_steps`, `grenade_fuse`, `grenade_bounce`, `grenade_unstick_px`, blast radii, damage) lives in **`src/config.defaults.lua`** under `weapon` — keep designer-facing tables in sync when changing defaults.
+
 - **Knockback**: Explosions apply impulse; moles can fall or get **dunked** in water/death plane if implemented (optional V1: instant death below map).
 - **Friendly fire**: **Match option** — default **OFF** for accessibility; when ON, own team can be damaged.
 
@@ -101,8 +107,8 @@ advance_mole_index(p):
 
 ### Session scoring (since launch)
 
-- On match end: increment **`wins[player]`** for winner.
-- **Displayed** between matches and on a **session stats** area (exact HUD layout → UX agent).
+- On match end: increment wins via **`src/data/session_scores.lua`** (`record_match_outcome` from `app.quit_match_to_results`).
+- **Displayed** in HUD chips + match end (`src/ui/hud.lua`, `match_end.lua`); draws tracked if implemented in session module.
 - **Not** required to persist across quit (per R6 wording).
 
 ### Match variables (minimum set)
@@ -113,9 +119,13 @@ advance_mole_index(p):
 | `first_player` | P1 / P2 / random | Who takes first turn |
 | `friendly_fire` | bool | Default false |
 | `turn_time_limit` | float or off | Optional |
-| `map_seed` | int | Optional override for proc gen |
+| `map_seed` | int \| nil | Optional override for proc gen (`nil` = random each match) |
+| `wind` | `"off"` \| `"low"` \| `"med"` \| `"high"` | Shipped in **`src/data/match_settings.lua`**; forces use `config.defaults.wind_force` |
+| `input_mode` | `"shared_kb"` \| `"dual_gamepad"` | Match setup → routing in **`input_manager`** |
 
-Additional vars (nice-to-have, not required by R1–R11): wind, explosion radius scale, jump power.
+**Shipped constraint:** `moles_per_team` is fixed at **5** for v1 (`match_settings.validate`).
+
+Additional tuning (global, not per-match UI): explosion scale, jump power — adjust in **`src/config.defaults.lua`** if needed.
 
 ### Team dynamics
 
@@ -143,33 +153,34 @@ Additional vars (nice-to-have, not required by R1–R11): wind, explosion radius
 
 ### Two players — **one keyboard + mouse**
 
-**Policy:** Only the **turn owner** receives **mouse** aim. The other player’s inputs are ignored for gameplay (except pause if shared).
+**Policy:** Only the **turn owner** receives **mouse** aim + **LMB** fire; the inactive player’s mouse does not steer shots (`world` / input consume flags gate this).
 
-**Suggested layout (rebindable later):**
+**Canonical layout (as implemented — duplicate of `README.md` for blueprint):**
 
 | Action | Player 1 | Player 2 |
 |--------|----------|----------|
-| Move | `A` / `D` | Left / Right arrows |
-| Jump | `W` or `Space` | `Up` or `RShift` (or `Enter` as jump if UX prefers) |
-| Aim − / + | `Q` / `E` | `[` / `]` or `,` / `.` |
-| Fire | `F` or `LMB` when P1 turn | `;` or `LMB` when P2 turn |
-| Weapon cycle | `1` / `2` or `Tab` | `-` / `=` |
+| Move | `A` / `D` | Left / Right |
+| Jump | `W` or `Space` | `Up` or `Right Shift` |
+| Aim − / + | `Q` / `E` | `[` / `]` |
+| Power − / + | `Z` / `X` | `I` / `K` *(chosen to avoid clash with P2 jump on `Up` — see `CODING_NOTES.md`)* |
+| Fire | `F` and/or **LMB** (when P1 turn) | `;` / `Enter` / numpad Enter / `Right Ctrl` and/or **LMB** (when P2 turn) |
+| Weapon pick | `1` rocket · `2` grenade · `Tab` cycle | `,` rocket · `.` grenade · `-` / `=` cycle |
 | End turn | `G` | `Backspace` or `\` |
 
-*Coding Agent:* centralize **input routing** by `turn_player` + **device policy** so key conflicts are minimized.
+*Implementation:* `src/input/keyboard_mouse.lua` (`build_intents`, `on_keypressed`); edge cases (e.g. `Enter` as P2 fire vs future UI) documented in **`CODING_NOTES.md`**.
 
 ### Two players — **separate gamepads**
 
-- **Player 1** → first detected joystick or assignment from menu; **Player 2** → second.
-- **Suggested:** Left stick or D-pad move; `A`/`X` jump; right stick **aim** (preferred) or bumpers for aim; `RT` fire; `LB`/`RB` weapon; `Y` end turn.
-- **Hotseat rule:** Ignore non-active pad except **pause** if both can pause — UX decision.
+- **Assignment:** Joystick order from `love.joystick.getJoysticks()` — first = P1, second = P2; **`match_setup`** warns if `dual_gamepad` and fewer than two devices.
+- **Canonical (as implemented):** Left stick move · **A** jump · **right stick** aim · **triggers** power · **B** fire · **LB/RB** weapon · **Y** end turn · **Start** pause. Menu navigation on **first** pad: D-pad / stick + **A** confirm + **B** back (`util/gamepad_menu.lua`).
+- **Designer note:** Some merged UX copy still mentions **RT** as fire; shipped game uses **B** for fire and triggers for **power** — treat **`CODING_NOTES.md`** + `gamepad.lua` as authoritative for gamepad.
 
-### LÖVE callback mapping (where logic lives conceptually)
+### LÖVE callback mapping (shipped wiring)
 
-- `love.keypressed` / `love.keyreleased` → buffer digital state.
-- `love.mousemoved` / `love.mousepressed` → only if `mouse_owner == turn_player` and match uses mouse aim.
-- `love.joystickpressed` / axis polling in `love.update` → per-player slots.
-- **Single module** conceptually responsible for **InputRouter(player, turn, scheme)** — actual file path is Architect’s call.
+- `main.lua` forwards to **`src/app.lua`** (`love.load` / `update` / `draw` / input / joystick / `resize`).
+- Digital keys: `app` → active scene + **`src/input/input_manager.lua`** → `keyboard_mouse.on_keypressed` / `gamepad.lua`.
+- Mouse: only when play scene + world considers turn owner (`consume_mouse_fire` pattern).
+- Text input: `love.textinput` → `app.textinput` (e.g. seed entry in setup).
 
 ---
 
@@ -177,13 +188,15 @@ Additional vars (nice-to-have, not required by R1–R11): wind, explosion radius
 
 ### States (state machine)
 
-1. **Boot / splash** (optional)
-2. **Main menu** — new match, match options, input test, quit
-3. **Match setup** — confirm seed, health, devices
-4. **Playing** — turn-based combat
-5. **Round interstitial** (optional) — only if multi-round match; REQ implies **match = one terrain + fight**; session is multiple matches
-6. **Match over** — show winner, update session score, rematch or menu
-7. **Pause** (overlay on Playing)
+**Implemented scene modules** (`app.push` / `app.goto` / `app.pop`): **`menu`** → **`match_setup`** → **`play`**; **`pause`** overlays play; **`match_end`** after win (`app.quit_match_to_results` records **`session_scores`** then pushes results). No separate boot splash unless added later.
+
+1. **Menu** — `src/scenes/menu.lua`
+2. **Match setup** — `src/scenes/match_setup.lua` (health, first player, wind, timer, seed, input mode)
+3. **Playing** — `src/scenes/play.lua` owns `World` lifecycle; turn toast on handoff (UX §3.6 style)
+4. **Pause** — `src/scenes/pause.lua` overlay
+5. **Match over** — `src/scenes/match_end.lua` (rematch → setup, or title)
+
+**Match =** one proc map + fight until elimination; **session** can chain many matches; scores in **`session_scores.lua`** only for process lifetime (R6).
 
 ### Update / draw flow (per frame)
 
@@ -206,18 +219,22 @@ draw():
 
 ## fileStructure
 
-*Game-designer hints only — Architect owns full tree.*
+*Game-designer map to **shipped** layout — extend here when adding mechanics, not a second architecture doc.*
 
-| Area | Suggested responsibility |
-|------|---------------------------|
-| `main.lua` | Bootstrap, require scenes, delegate `love.*` |
-| `conf.lua` | Window, vsync |
-| Scene modules (e.g. `src/scenes/*.lua`) | Menu, play, gameover |
-| World/combat modules | Terrain, mole entities, projectiles, explosions, turn controller |
-| `src/data/` or inline | Weapon defs (damage, radius, fuse, sprite ids) |
-| Input | Dedicated router used by play scene |
+| Game concern | Primary modules |
+|--------------|-----------------|
+| App / scenes | `src/app.lua`, `src/scenes/*.lua` |
+| Turn order + roster | `src/sim/turn_state.lua` (normative rotation) |
+| World step + combat | `src/sim/world.lua`, `damage.lua`, `physics.lua` |
+| Terrain + proc gen | `terrain.lua`, `terrain_gen.lua` |
+| Moles | `mole.lua`, `render/mole_draw.lua` |
+| Weapons | `sim/weapons/*.lua` + tuning in `config.defaults.lua` |
+| Match / session data | `data/match_settings.lua`, `data/session_scores.lua` |
+| Input routing | `input/input_manager.lua`, `keyboard_mouse.lua`, `gamepad.lua` |
+| HUD / UX chrome | `ui/hud.lua` (layout owned by UX spec; mechanics feed it turn + HP + fuse) |
+| Audio feedback | `audio/sfx.lua` (procedural until `assets/audio` added) |
 
-**Dependency direction:** scenes orchestrate; entities do not require scenes; weapons data tables do not require entities.
+**Dependency direction:** scenes orchestrate world; sim modules do not require scenes; weapons registry stays data-driven from defaults + world.
 
 ---
 
@@ -245,26 +262,23 @@ draw():
 
 ## assetStructure
 
-*Naming for game-art handoff — paths illustrative.*
+**Shipped raster (see `ASSETS.md` for resolution + draw-scale guidance):**
 
 ```
-assets/
-  sprites/
-    mole_team_a_idle.png / mole_team_a_walk_*.png / mole_team_a_aim.png
-    mole_team_b_*.png
-    rocket.png
-    grenade.png
-    terrain_tileset.png (if tile-based) OR generated at runtime (coder)
-  audio/
-    sfx_rocket_fire.wav
-    sfx_grenade_toss.wav
-    sfx_explosion_*.wav
-    ui_click.wav
-  fonts/
-    (UI font — UX picks)
+assets/sprites/
+  mole_team_{a,b}_{idle,aim,walk_1,walk_2}.png
+  rocket.png
+  grenade.png
+  ui_icon_rocket.png
+  ui_icon_grenade.png
+  ui_icon_wind.png
 ```
 
-**Animation states (minimum):** idle, walk (2+ frames or bob), aim/fire pose, hurt, death (simple fall off or poof).
+Terrain is **generated** into the sim (`terrain_gen` / mask), not a tileset PNG in v1.
+
+**Optional / gaps:** `assets/audio/*`, `assets/fonts/*`, hurt/death mole frames, explosion sheets — listed as follow-ups in **`ASSETS.md`**. V1 uses **`src/audio/sfx.lua`** procedural blips.
+
+**Animation states (minimum, shipped):** idle, walk (2 frames), aim; hurt/death may remain visual hacks until art lands.
 
 ---
 
@@ -278,15 +292,13 @@ assets/
 
 ## implementationOrder
 
-1. **Core loop + terrain + one mole** movement/jump on static test map.
-2. **Second mole + turn switching** (no weapons) to validate rotation pointers.
-3. **Rocket** + collisions + terrain destruction + damage.
-4. **Grenade** + fuse + distinct VFX.
-5. **5 moles per team**, spawn placement, elimination win, **session score**.
-6. **Proc gen** maps hooked to match start + seed option.
-7. **Match options** (health, friendly fire, first player).
-8. **Input modes**: shared KB+M routing + two gamepads.
-9. **Polish**: particles, screenshake (subtle), sound; menu flow to UX spec.
+**Status:** Core game is **implemented** per upstream `lua-coding` passes. Use this as **regression / feature order** when touching mechanics:
+
+1. **`turn_state` + `world`** — verify end-turn advance + `sync_slots_to_living` after damage (R8).
+2. **Weapons** — rocket/grenade vs `config.defaults` tuning; wind + proc seed consistency.
+3. **Input** — shared KB+M gating + gamepad parity; check `CODING_NOTES.md` when changing bindings.
+4. **Match setup / HUD** — new match vars must flow `match_settings` → `World` / HUD.
+5. **Polish** — replace procedural SFX, add missing sprites, optional `round_end` beat (`CODING_NOTES.md` suggestions).
 
 ---
 
@@ -300,12 +312,13 @@ assets/
 
 ## Notes for Coding Agent
 
-- Treat `REQUIREMENTS.md` R1–R11 as **acceptance criteria**; this doc refines **behavior** only.
-- **Turn/mole rotation:** Follow the **normative pseudocode** in **Turn model**; **symmetric same-slot** progression is intentional. **`turn_state.lua`** (or equivalent) must not advance the inactive player’s roster on turn end.
-- **Player rotation** = strict **alternating turns** between humans; **mole rotation** = **that player’s** roster index advances **once per their own completed turn** (skip dead).
-- **Mouse** in shared mode: **gate** all mouse handlers on `active_player == mouse_bound_player` or “only active turn.”
-- Keep weapon parameters in **data tables** so tuning does not scatter magic numbers.
-- Do not implement **network multiplayer** in this design scope.
+- Treat `REQUIREMENTS.md` R1–R11 as **acceptance criteria**; trace status in **`CODING_NOTES.md`**.
+- **Turn/mole rotation:** **Normative pseudocode** in **Turn model** wins over any conflicting **`DESIGN.md` Part B/C** prose; **`src/sim/turn_state.lua`** already encodes `advance_after_turn` + `end_turn` accordingly.
+- **Player rotation** = alternating **human** turns; **mole rotation** = ended player’s **slot** advances once per **completed** turn (skip dead).
+- **Controls:** Player-facing list = **`README.md`**; scancodes = **`keyboard_mouse.lua`** / **`gamepad.lua`**; document binding changes in **`CODING_NOTES.md`** if UX and Part A diverge.
+- **Mouse:** Turn-owner-only aim/fire in play; watch **`Enter`** / **`Return`** overlap if in-match UI grows.
+- Weapon numbers: **`src/config.defaults.lua`** (`weapon` + `wind_force`); avoid duplicating magic constants in weapon modules.
+- **Scope:** No **network multiplayer**.
 
 ---
 

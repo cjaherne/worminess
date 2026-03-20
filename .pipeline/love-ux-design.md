@@ -2,38 +2,30 @@
 
 **Agent:** `love-ux`  
 **Scope:** Screens, HUD, input affordances, resolution/scaling, focus/navigation — not combat math or physics (Game Designer / LÖVE Architect).  
-**Traceability:** Maps to `REQUIREMENTS.md` R1–R11 and the checklist in root **`DESIGN.md`**.
+**Traceability:** `REQUIREMENTS.md` R1–R11; root **`DESIGN.md`** checklist.
 
-**Orchestrator / merge note:** Sections **§2–§8** (resolution through components), **§11** (JSON), and **§12** (crosswalk) are intended to be copied into root **`DESIGN.md`** as a self-contained chapter (suggested heading: **`## LÖVE UX — Screens, HUD, flows, and input`**). §0–§1 and §9–§10 remain implementation handoff; include them in the merge if the merged doc should be fully self-contained for coders. **This file is the canonical source** — do not truncate wireframes, §4 flows, §5–§6 input/accessibility, or the component list when merging.
+**Orchestrator / `DESIGN.md` merge:** Sections **§2–§8** (resolution through components), **§11** (JSON), and **§12** (crosswalk) are the **self-contained LÖVE UX chapter** to paste under e.g. **`## LÖVE UX — Screens, HUD, flows, and input`**. §0–§1 and §9–§10 are handoff to coders. **Do not truncate** wireframe tables, §4 flows, §5–§6, or §8 when merging.
+
+**As-implemented baseline (this revision):** The repo contains working menus, match setup, play HUD, pause, match end, `viewport` letterboxing, and assets under **`assets/sprites/`**. Wireframes below list **observed layout** from **`src/ui/hud.lua`** and **`src/scenes/*.lua`** first, then **optional polish** deltas.
 
 ---
 
-## 0. Codebase baseline (build on these files)
+## 0. Codebase baseline (authoritative files)
 
-| File | UX relevance |
-|------|----------------|
-| **`conf.lua`** | Window **1280×720**, **min** **960×540**, resizable, vsync, identity `moles-wormslike`, title `Moles`, **LÖVE 11.4** — design anchors in §2 match this exactly. |
-| **`main.lua`** | Thin callbacks; delegates to **`src/app.lua`** when present (Coding Agent). UI scenes: architect’s `src/scenes/` + `src/ui/`. |
-| **`src/data/match_settings.lua`** | **Authoritative schema** for match-setup: `defaults()`, `validate()`, `merge_partial()`. UI commits only through this module. |
-| **`src/data/session_scores.lua`** | Session wins/draws: `get_snapshot()`, `record_match_outcome(winner_id)`, `reset()`. |
-| **`src/config.defaults.lua`** | Tuning + **`colors.team1` / `colors.team2`**, **`weapon.grenade_fuse`**, **`wind_force.low|med|high`** — HUD copy for wind/fuse can reference these for consistency (display labels, not raw numbers required). |
-| **`src/sim/turn_state.lua`** | **Turn truth** for HUD: `active_player` (1\|2), `mole_slot[1]`, `mole_slot[2]`, `turn_time_left` / `_turn_limit`, `end_turn`, `update_timer`. **TurnView** (§1.3) must reflect this state after `sync_slots_to_living`. |
-| **`src/sim/terrain_gen.lua`** | Procedural map (R5); surface **`map_seed`** from `match_settings` in **`MapMetaView`** when set. |
-| **`src/sim/terrain.lua`**, **`damage.lua`**, **`physics.lua`** | In-world readability (hits, knockback, destruction) should emit **events** the HUD/effects layer can show (numbers optional; flash/shake per §6). |
+| Area | Files |
+|------|--------|
+| Boot / stack | **`main.lua`** → **`src/app.lua`** (`push`/`pop`/`goto`, `gamepadpressed` **Start** toggles pause on **`play`** / **`pause`**) |
+| Logical UI space | **`src/util/viewport.lua`** — fixed **1280×720** logical; uniform scale + letterbox (matches **`conf.lua`**) |
+| Global HUD | **`src/ui/hud.lua`** — sky background, turn banner, session chips, weapon panel, wind panel, **help strip**, roster |
+| Scenes | **`src/scenes/menu.lua`**, **`match_setup.lua`**, **`play.lua`**, **`pause.lua`**, **`match_end.lua`** |
+| Menu gamepad | **`src/util/gamepad_menu.lua`** — first connected gamepad, D-pad / left stick + **0.22 s** cooldown |
+| Play input | **`src/input/input_manager.lua`**, **`keyboard_mouse.lua`** (`shared_kb`), **`gamepad.lua`** (`dual_gamepad`, **20%** stick deadzone) |
+| Data | **`src/data/match_settings.lua`**, **`src/data/session_scores.lua`** |
+| Tuning / colors | **`src/config.defaults.lua`** — `colors.team1` / `team2`, `weapon.*`, `wind_force.*` |
+| Sim (HUD truth) | **`src/sim/turn_state.lua`**, **`src/sim/world.lua`** — turn banner + toast use `world.turn`, `world.moles`, `world.settings` |
+| Art manifest | **`ASSETS.md`** — sprite paths, suggested scales, HUD icon sizes |
 
-**Pseudocode — UI ↔ data modules:**
-
-```lua
-local match_settings = require("data.match_settings")
-local s = match_settings.merge_partial(last_settings, form_partial)
-
-local session_scores = require("data.session_scores")
-local snap = session_scores.get_snapshot()
-
-session_scores.record_match_outcome(winner_id) -- 1, 2, or 0 draw
-```
-
-**Team colors (HUD):** `local defaults = require("config.defaults")` then `defaults.colors.team1`, `defaults.colors.team2`.
+**Session score call sites:** Normal win: **`play.lua`** calls **`session_scores.record_match_outcome`** then **`app.end_match`**. Forfeit: **`pause.lua`** → **`app.quit_match_to_results`** (also records in **`app.lua`**). **`match_end`** only **displays** `get_snapshot()`.
 
 ---
 
@@ -41,368 +33,286 @@ session_scores.record_match_outcome(winner_id) -- 1, 2, or 0 draw
 
 ### 1.1 Design intent
 
-- **Readable in motion:** HUD and world feedback stay legible during camera pan, explosions, and turn transitions (R1).
-- **Two local humans, zero ambiguity:** Always show *whose turn it is*, *which mole slot is active*, and *which input mode* applies (R4, R10, R11).
-- **Match variables before play:** All **`match_settings`** fields editable in setup (R9).
-- **Session score:** **`session_scores.get_snapshot()`** on title, HUD, results (R6).
+- **Readable in motion:** HUD uses dark translucent panels + team dots; phase line explains “one shot / reposition / resolving” (`hud.turn_phase`).
+- **Two players, one screen:** Turn banner + **turn handoff toast** (`play.lua`) remove ambiguity about who acts.
+- **Match variables:** Single **`match_setup`** list bound to **`match_settings`** (validate on **Start**).
+- **Honest session scores:** Title + in-match top-right + **match_end** show the same snapshot fields.
 
-### 1.2 Scene graph — UX ids ↔ architect scenes
+### 1.2 Scene ids ↔ modules
 
-| UX id | Architect scene | Lua hint |
-|-------|-------------------|----------|
-| `scene_title` | MainMenu | `src/scenes/menu.lua` |
-| `scene_match_setup` | MatchSetup | `src/scenes/match_setup.lua` |
-| `scene_gameplay` | Play | `src/scenes/play.lua` |
-| `overlay_pause` | Pause | `src/scenes/pause.lua` |
-| `scene_round_summary` | RoundEnd (optional) | `src/scenes/round_end.lua` |
-| `scene_match_results` | MatchEnd | `src/scenes/match_end.lua` |
+| UX id | Module | Notes |
+|--------|--------|--------|
+| `scene_title` | `scenes/menu.lua` | Play / Match options / How to play / Quit |
+| `scene_match_setup` | `scenes/match_setup.lua` | Vertical option rows (not two-column in v1) |
+| `scene_gameplay` | `scenes/play.lua` | World draw + HUD + toast |
+| `overlay_pause` | `scenes/pause.lua` | Pushed on stack over play |
+| `scene_match_results` | `scenes/match_end.lua` | Shown via `app.end_match` after pop |
 
-### 1.3 View model contract
+### 1.3 View model (UI reads)
 
-**`SessionView`** — `session_scores.get_snapshot()`:
-
-```text
-gamesPlayedP1, gamesPlayedP2, gamesDrawn, games_played
-```
-
-**`MatchSettingsView`** — after `match_settings.validate()`:
-
-```text
-moles_per_team (fixed 5), mole_max_hp, first_player, friendly_fire,
-turn_time_seconds, map_seed, input_mode ("shared_kb"|"dual_gamepad"), wind
-```
-
-**`TurnView`** — align with **`src/sim/turn_state.lua`**:
-
-```text
-active_player          -- 1 | 2
-active_mole_slot       -- mole_slot[active_player], 1..5
-inactive_mole_slots    -- optional: show opponent’s slot for context
-turn_time_left         -- number; hide or show “∞” when turn_time_seconds == 0
-phase                  -- move | aim | firing | resolving (labels for UX only; sim may collapse)
-```
-
-**`CombatHudView`:** `weapon: rocket|grenade`, `aim_angle`, `power_01`, `grenade_time_left` (live fuse) / `grenade_fuse_total` (from defaults for bar max).
-
-**`RosterView`:** per player, slots 1..5: `hp_current`, `hp_max`, `alive`, optional `name`.
-
-**`MapMetaView`:** `seed` if non-random; short label “Procedural map” if nil.
+- **`session_scores.get_snapshot()`** → `gamesPlayedP1`, `gamesPlayedP2`, `gamesDrawn`, `games_played`.
+- **`match_settings`** validated table on `world.settings` in play.
+- **`world.turn`:** `active_player`, `mole_slot[1|2]`, `turn_time_left`; **`hud.draw_turn_banner`** uses **`turn:active_mole(world.moles)`** for HP.
+- **Weapon / aim:** `world.weapon_index`, `world.aim_angle`, `world.power`, `world.projectiles` (live grenade fuse line in weapon panel).
 
 ---
 
 ## 2. Resolution, scaling, and safe areas
 
-### 2.1 Base logical resolution
-
-- **`conf.lua`:** **1280 × 720**. All regions in §3 use this space.
-
-### 2.2 Minimum window
-
-- **960 × 540** — keep critical controls inside **safe margins** so nothing clips.
-
-### 2.3 Safe margins
-
-- **≥ 24 px** from edges for interactive HUD and primary copy.
-- **≥ 48 px** for elements that must not clip under letterboxing on non-16:9 displays.
-
-### 2.4 Scaling
-
-- Uniform scale to logical 720p; letterbox/pillarbox as needed.
-- Prefer crisp UI (canvas at logical size, scaled draw). **No illegible micro-text** on large monitors.
+- **Logical:** **1280 × 720** (`conf.lua` + `viewport.LW/LH`).
+- **Minimum window:** **960 × 540** (`conf.lua`).
+- **Scaling:** `viewport.fit_transform()` — uniform `s = min(w/LW, h/LH)`, offsets `ox, oy`; all menu/HUD draws assume logical coordinates inside **`app.draw`**’s translate/scale.
+- **Safe margin:** Keep critical controls **≥ 24 px** inside logical edges; roster + help strip already sit above bottom **108 + 64** stack — avoid stacking more permanent chrome below **y ≈ 520** without overlapping **`draw_help_strip`** (**y 532–596**).
 
 ---
 
-## 3. Wireframes — pixel regions (1280 × 720)
+## 3. Wireframes — pixel regions (as implemented, 1280 × 720)
 
-### 3.1 `scene_title` (MainMenu)
+### 3.1 `scene_title` (`menu.lua`)
 
 | Region (x, y, w, h) | Element |
 |---------------------|---------|
-| (0, 0, 1280, 720) | Full-bleed background, vignette |
-| (440, 180, 400, 280) | Card: logo / wordmark **Moles** |
-| (440, 420, 400, 140) | Vertical stack, **56 px** row height, **12 px** gap: **Play**, **Match options**, **How to play**, **Quit** |
-| (40, 40, 520, 120) | **Session chip:** `P1 wins · P2 wins · Draws` + caption *This session* |
-| (840, 600, 400, 80) | Version / credits (low contrast) |
+| (0, 0, 1280, 720) | `hud.draw_background()` + dim overlay **α 0.35** |
+| (440, 180, 400, ~80) | Title **MOLES** (shadow + main) |
+| (440, 420, 400, 56×4) | Four menu rows, **68 px** vertical pitch, **56 px** row height, **400×56** hit area |
+| (36, 36, 520, 100) | Session panel: *This session* + `P1 wins · P2 wins · Draws` |
+| (400, 600, 480) / (840, 612, 400) | Tiny footer hints (gamepad / LÖVE blurb) |
 
-**Element inventory:** background art layer; title card; four primary buttons; session stats block; footer line.
+**Focus order:** Play → Match options → How to play → Quit. **Keyboard:** Up/Down or W/S; Enter/Space activate. **Gamepad:** `gamepad_menu` up/down; **A** activate. **How to play:** full-screen modal; Esc / Enter / **A** / **B** close.
 
-**Focus order:** Play → Match options → How to play → Quit. **Default:** Play.
-
-**Play:** If no saved setup profile, **force** Match setup; else start with last validated **`match_settings`** and bindings.
+**Play:** Uses **`app.last_match_settings`** → **`goto play`** else **`goto match_setup`**.
 
 ---
 
-### 3.2 `scene_match_setup` (MatchSetup)
+### 3.2 `scene_match_setup` (`match_setup.lua`)
+
+**Layout:** Single **centered list** (not two P1/P2 columns in current build).
 
 | Region | Element |
 |--------|---------|
-| (40, 32, 1200, 64) | Header *Match setup*; breadcrumb `Title ▸ Setup` |
-| (40, 112, 580, 520) | **Player 1** column — accent `team1` color |
-| (660, 112, 580, 520) | **Player 2** column — accent `team2` color |
-| (40, 656, 1200, 48) | Footer: **Back** (left), **Start match** (right, primary) |
+| (48, 28, —) | Title *Match setup* |
+| (48, 78, —) | Breadcrumb *Title ▸ Setup* |
+| (40, 120, 1180, 52) × **9 rows** | Option rows, **60 px** vertical step; selected row `›` prefix |
+| (48, ~668+) | Footer: *Enter / A: start · Esc / B: title · Arrows / D-pad · Left/Right: value · Seed: digits* |
+| (48, below list) | **Warning** if `dual_gamepad` and `< 2` joysticks |
 
-**Per column**
+**Rows (order = focus order):** Roster size (readonly) → Mole health (step 10) → First turn (cycle 1/2/random) → Friendly fire → Turn limit (preset ladder 0,30,60,…) → Map seed (text buffer) → Input mode (toggle) → Wind (cycle).
 
-1. **Input / mode copy** (see `input_mode`): `shared_kb` explains shared KB+M; `dual_gamepad` shows **Assigned: Gamepad A/B** or *Unassigned* + warning.
-2. **Five mole pips** (slots 1–5), read-only preview.
+**Keyboard:** Up/Down/W/S focus; Left/Right/A/D change value; Enter starts; Esc → menu; **textinput** digits on seed row only. **Gamepad:** nav up/down; left/right value; **A** start; **B** menu.
 
-**Match variables** (bind 1:1 to **`match_settings`**):
-
-| Field | Control | Label |
-|-------|---------|--------|
-| `moles_per_team` | Read-only | “5 moles per team” |
-| `mole_max_hp` | Stepper / chips | “Mole health” (10–500) |
-| `first_player` | Segmented | “Who goes first?” P1 / P2 / Random |
-| `friendly_fire` | Toggle | “Friendly fire” |
-| `turn_time_seconds` | 0 + presets + numeric | “Turn limit” (0 = off, max 300) |
-| `map_seed` | Text / empty | “Map seed (optional)” |
-| `input_mode` | Two cards | “Shared keyboard & mouse” vs “Two gamepads” |
-| `wind` | Segmented | Off / Low / Med / High |
-
-**Focus model:** P1 column top→bottom → P2 column → globals (match variables) → footer. Optional **LB/RB** to jump P1↔P2 headers. **Default focus:** first control in P1 column (or `input_mode` if listed first in implementation).
+**Optional UX polish (not required for parity):** Two-column “team preview” mirroring original spec; device assignment per player instead of global `input_mode`.
 
 ---
 
-### 3.3 `scene_gameplay` (Play) — HUD
+### 3.3 `scene_gameplay` — HUD (`hud.lua` + `play.lua`)
 
-| Region | Content |
+| Region (x, y, w, h) | Function / content |
+|---------------------|---------------------|
+| (20, 10, 600, 96) | **`draw_turn_banner`** — team dot, Player N · Team A/B, active slot, HP, **phase** text @ x≈320, **turn timer** if enabled |
+| (636, 10, 624, 96) | **`draw_session_line`** — three chips P1 wins / P2 wins / Draws + *Matches finished* |
+| (20, 114, 328, 200) | **`draw_weapon_panel`** — `ui_icon_rocket` / `ui_icon_grenade` (~0.42 scale), weapon blurb, aim °, power bar; grenade fuse copy + **live grenade** fuse bar when flying |
+| (932, 114, 328, 200) | **`draw_wind_timer`** — `ui_icon_wind` when wind on, direction text + large arrow glyph; note if turn limit enabled |
+| (24, 532, 1232, 64) | **`draw_help_strip`** — one-line **shared_kb** vs **dual_gamepad** cheat sheet |
+| (20, 604, 1240, 108) | **`draw_roster`** — Team A row @ y≈612, Team B @ y≈658; slots **118 px** apart, **108×40** cells, HP bar + numeric HP, **gold outline** active slot |
+| (400, 312, 480, 56) | **Turn toast** (`play.lua`) — *Next: Player i · Mole slot j* (**~1.65 s**) |
+
+**Element inventory:** Gradient sky (world backdrop); all HUD panels rounded rects **α 0.5** black; team colors from **`config.defaults`**.
+
+**Optional polish:** Trajectory preview styling beyond current aim preview (`mole_draw.draw_aim_preview`); dedicated `MapMetaView` line for seed during play.
+
+---
+
+### 3.4 `overlay_pause` (`pause.lua`)
+
+| Region | Element |
 |--------|---------|
-| (24, 16, 600, 88) | **Turn banner:** `Player {n} — Mole {slot}` + team dot (colors from `config.defaults`) |
-| (656, 16, 600, 88) | **Session line:** `P1 W · P2 W · D` |
-| (24, 104, 340, 200) | **Weapon & aim:** icons rocket/grenade, angle, power bar; grenade **fuse** bar + seconds |
-| (916, 104, 340, 200) | **Wind** (if not off): arrow + Low/Med/High; **turn countdown** if timer on |
-| (24, 620, 1232, 76) | **Roster bar:** two groups × 5; HP per slot; dead = dim/grey |
+| (0, 0, 1280, 720) | Dim **α 0.42** |
+| (380, 180, 520, 360) | Panel; *Paused*; four rows **52 px** pitch: Resume · How to play · Forfeit · Quit to title |
 
-**Element inventory:** turn + session; weapon panel; wind/timer; full roster; world-layer trajectory (rocket dashed line); grenade arc optional; active-mole **ring** in world + **2 px** roster highlight.
+**Forfeit:** Selecting **Forfeit** sets **`forfeit_confirm`**; banner *Press Enter / A to confirm*; **Esc** / **B** cancels confirm. Confirm → opponent wins → **`quit_match_to_results`**.
 
-**Weapon UX:** selected = filled icon; other = outline. **Rocket:** high-contrast dashed trajectory + small impact marker. **Grenade:** visible **fuse pulse** (color or blink) matching danger.
+**Keyboard:** Up/Down, Enter activate; Esc = back/pop. **Gamepad:** **B** = back or pop; **A** activate; **Start** (in **`app`**) pops pause when top is pause.
 
 ---
 
-### 3.4 `overlay_pause` (Pause)
+### 3.5 `scene_match_results` (`match_end.lua`)
 
-- Dim world **~40%**.
-- Modal **520 × 360** centered (e.g. x=380, y=180):
-
-| Row | Control |
-|-----|---------|
-| 1 | **Resume** (default focus) |
-| 2 | **How to play** |
-| 3 | **Forfeit match** (destructive, secondary style) |
-| 4 | **Quit to title** |
-
-**Open:** Esc, Start (gamepad). **Close from Resume:** Esc, B/back.
-
----
-
-### 3.5 `scene_match_results` (MatchEnd)
-
-| Region | Content |
+| Region | Element |
 |--------|---------|
-| (240, 80, 800, 120) | Headline: winner or Draw |
-| (240, 220, 800, 280) | Stats: turns, survivors, duration (optional) |
-| (240, 520, 800, 120) | **Rematch** · **New setup** · **Title** |
-
-Ensure **`session_scores.record_match_outcome`** has run before or when this screen is shown; displayed totals must match **`get_snapshot()`** (R6).
-
----
-
-### 3.6 `scene_round_summary` (optional)
-
-Toast or full-screen **1.2–2 s:** e.g. *Next: Player 2 — Mole 3* for rotation clarity (R8).
+| (0, 0, 1280, 720) | Dim **α 0.55** |
+| (240, 80, 800, 520) | Card: headline (winner or Draw), session totals, **Map seed used** |
+| (260, 460, 760) | Footer: *Enter / A: Rematch · S / X: New setup · Esc / B: Title* |
 
 ---
 
 ## 4. User flows (step-by-step)
 
-### 4.1 Cold start → first match
+### 4.1 Cold start → match
 
-1. Launch → **`scene_title`** (session 0-0-0).
-2. **Match options** → **`scene_match_setup`** → edit → **`match_settings.merge_partial`** → **Start match** → short load (“Digging tunnel…”) → **`scene_gameplay`**.
-3. **Play** on title: last settings, or setup if none / first run.
+1. **`app.load`** → push **`menu`**.
+2. **Match options** → **`match_setup`** → edit draft → **Enter / A** → `match_settings.validate` → **`play`** with settings.
+3. **Play** (title): if **`last_match_settings`** → **`play`**; else **`match_setup`**.
 
-### 4.2 In-match loop
+### 4.2 In-match
 
-1. Turn start → banner + roster highlight + camera on active mole (`turn_state.active_player`, `mole_slot`).
-2. Move/aim → weapon panel + trajectory/fuse update.
-3. Fire → **resolving** feedback; brief input lock.
-4. Damage → HP bar animation; optional edge flash (team color).
-5. End turn (player or timer) → sim calls **`end_turn`** → optional **`scene_round_summary`**.
-6. Repeat until win condition.
+1. **`play.update`:** intents from **`input_manager`** (mode-dependent); mouse aim only when **`shared_kb`** + `viewport.screen_to_logical`.
+2. Turn change detection → **toast** 1.65 s.
+3. **`world.won`** → **`record_match_outcome`** → **`end_match`** → stack cleared → **`match_end`** with winner, settings, `map_seed_used`.
 
-### 4.3 Turn timer (when `turn_time_seconds` > 0)
+### 4.3 Pause
 
-- HUD shows **`turn_time_left`**.
-- At 0, auto **end turn** (same UX as manual end: brief toast *Time’s up*).
+**Esc** (play) or **Start** (gamepad, `app.gamepadpressed`) → **`pause`** pushed. Resume pops; Quit to title **`goto menu`**.
 
-### 4.4 Match end
+### 4.4 Forfeit
 
-1. Win/draw detected → short celebration (**≤ 2 s**) → **`scene_match_results`**.
-2. Session chip on next **`scene_title`** reflects new totals.
+Pause → Forfeit → confirm → **`quit_match_to_results(other_player, settings)`** → **`match_end`**.
 
-### 4.5 Pause
+### 4.5 Match end
 
-**Gameplay** → Esc/Start → **`overlay_pause`** → Resume (return) | How to play | Forfeit | Quit to title.
+**Rematch** → **`goto play`** same settings. **New setup** → **`match_setup`** (**S** or gamepad **X**). **Title** → **`menu`** (**Esc** / **B**).
 
-### 4.6 Forfeit
-
-**Forfeit match** → confirm dialog (recommended) → declare opponent winner → **`scene_match_results`** or compact **forfeit results** line → **`record_match_outcome`**.
-
-### 4.7 Rematch / setup / title
-
-- **Rematch:** same **`match_settings`**, new terrain (unless seed fixed), new **`turn_state`**, → **`scene_gameplay`**.
-- **New setup:** → **`scene_match_setup`**.
-- **Title:** → **`scene_title`**.
-
-### 4.8 Dual gamepad gaps
-
-If **`dual_gamepad`** and <2 pads: **warning**, offer switch to **`shared_kb`** or wait; never silent failure.
-
-### 4.9 State diagram (high level)
+### 4.6 State diagram
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Title
-  Title --> MatchSetup: Match options
-  Title --> Play: Play (has profile)
-  Title --> MatchSetup: Play (first run)
-  MatchSetup --> Play: Start match
+  [*] --> Menu
+  Menu --> MatchSetup: Match options
+  Menu --> Play: Play (has last settings)
+  Menu --> MatchSetup: Play (no settings)
+  MatchSetup --> Play: Start
+  MatchSetup --> Menu: Esc / B
   Play --> Pause: Esc / Start
-  Pause --> Play: Resume
-  Pause --> Title: Quit to title
-  Pause --> MatchResults: Forfeit (confirm)
-  Play --> MatchResults: Win / draw
-  MatchResults --> Play: Rematch
-  MatchResults --> MatchSetup: New setup
-  MatchResults --> Title: Title
+  Pause --> Play: Resume / Start
+  Pause --> Menu: Quit to title
+  Pause --> MatchEnd: Forfeit confirm
+  Play --> MatchEnd: Win / draw
+  MatchEnd --> Play: Rematch
+  MatchEnd --> MatchSetup: New setup
+  MatchEnd --> Menu: Title
 ```
 
 ---
 
-## 5. Input mappings and interactions
+## 5. Input mappings and interactions (as coded)
 
-### 5.1 `match_settings.input_mode`
+### 5.1 Modes
 
-| Value | Behavior |
-|-------|----------|
-| `shared_kb` | One keyboard + mouse; **mouse aim only for `turn_state.active_player`** (R10). |
-| `dual_gamepad` | Two controllers; map joysticks to P1/P2 (R11). |
+| `match_settings.input_mode` | Module |
+|-----------------------------|--------|
+| `shared_kb` | **`keyboard_mouse.lua`** + mouse click via **`input_manager:mousepressed`** |
+| `dual_gamepad` | **`gamepad.lua`** — `getJoysticks()[1]` = P1, `[2]` = P2 |
 
-Show summaries on setup + **How to play**.
+Only the **active** player’s keyboard block is polled each frame (`turn_state.active_player`).
 
 ### 5.2 Shared keyboard + mouse
 
-| Action | P1 | P2 |
-|--------|----|----|
-| Aim (mouse) | when active | when active |
-| Aim left/right | A / D | Left / Right |
-| Power up/down | W / S | Up / Down |
-| Fire | Space | Right Ctrl or Enter (pick one) |
-| Jump | Q | ] or Numpad 0 |
-| Weapon | 1 / 2 or [ / ] | , / . |
-| End turn (optional) | E | Numpad Enter |
-| Pause | Esc | Esc |
+| Action | Player 1 (when active) | Player 2 (when active) |
+|--------|-------------------------|-------------------------|
+| Move | A / D | Left / Right |
+| Jump | W or **Space** | Up or **Right Shift** |
+| Aim adjust | Q / E | `[` / `]` |
+| Power adjust | Z / X | **K** (down) / **I** (up) |
+| Fire | **F** | **;** or **Right Ctrl** or **Return** or **Keypad Enter** |
+| End turn | **G** | **Backspace** or **\\** |
+| Weapon direct | **1** rocket, **2** grenade | **,** rocket, **.** grenade |
+| Cycle weapon | **Tab** | **-** / **=** |
+| Aim + fire (mouse) | **Left click** → same as fire for **active** player only | (when P2 active, same mouse) |
 
-**Tooltip (first session):** *Mouse aims the active player only.*
+**Note:** **Space** is **jump** for P1 when active, not fire; keyboard fire uses **F** / P2 keys above. **`love.mousepressed` button 1** sets **`consume_mouse_fire`** for the active player.
 
-### 5.3 Gamepad (each player)
+### 5.3 In-match gamepad (per active player’s stick)
 
-| Action | Map |
-|--------|-----|
-| Aim | Left stick |
-| Fine aim | D-pad L/R |
-| Power | Triggers (preferred) or R-stick vertical |
-| Fire | South face |
-| Weapon | LB / RB |
-| End turn | Y / Triangle (optional) |
-| Pause | Start |
+| Action | Mapping |
+|--------|---------|
+| Move | Left stick X (**20%** deadzone) |
+| Jump | **A** |
+| Aim | Right stick → absolute aim angle when non-zero |
+| Power | **Right trigger − left trigger** |
+| Fire | **B** |
+| End turn | **Y** |
+| Cycle weapon | **LB** / **RB** |
 
-**How to play:** ~**15%** dead zone note.
+### 5.4 Global / menu gamepad
 
-### 5.4 Global
+- **`app.gamepadpressed`:** **Start** on **`play`** → pause; **Start** on **`pause`** → pop (resume).
+- **Menus** (`menu`, `match_setup`, `pause`, `match_end`): first gamepad with **`gamepad_menu`**; **A** confirm; **B** back where implemented; **match_end** **X** = new setup.
 
-Quit from title; **Quit to title** from pause.
+### 5.5 Menus (keyboard)
 
-### 5.5 Menu / setup navigation (controller)
-
-- **A / cross:** activate.
-- **B / circle:** back (setup footer **Back**, pause dismiss when on Resume).
-- **D-pad / stick:** move focus.
-- **Default focus** per screen as in §3.
+- **menu:** Up/Down, Enter/Space.
+- **match_setup:** arrows/W/S, Left/Right, Enter start, Esc menu.
+- **pause:** same pattern as menu + forfeit confirm branch.
 
 ---
 
 ## 6. Accessibility & readability
 
-- **Contrast:** UI text **≥ 4.5:1** on panels; stroked or chip-backed turn text.
-- **P1/P2:** always **text labels**; color is secondary (left/right or icon shape).
-- **Type scale (logical px):** body **18–20**, HUD numbers **≥ 22**, title **≥ 36**.
-- **Reduce motion** (optional future toggle): shorten toasts, disable camera shake.
-- **In-world:** mole + projectile **silhouette/outline**; explosion **1–2** bright frames; damage **optional floating numbers** (off by default if busy).
+- **Contrast:** Light text on **dark translucent** panels (implemented); keep **≥ 4.5:1** for any new panels.
+- **P1/P2:** Banner uses **Player N** + **Team A/B** + **color dot** — not color-only.
+- **Fonts:** `app.load` sets **40 / 20 / 17 / 14** pt-ish fonts for title/HUD/small/tiny; maintain **≥ 22 px** effective for critical HUD numbers if font file changes.
+- **Motion:** Toast is short; optional “reduce motion” could disable toast or camera shake (if added later).
+- **In-world:** See **`ASSETS.md`** — mole/projectile scales; team-readable palette aligns with **`defaults.colors`**.
 
 ---
 
-## 7. File / directory structure (UX-facing)
+## 7. File / directory structure (UX-relevant, current)
 
-**Present in repo:** `conf.lua`, `main.lua`, `src/config.defaults.lua`, `src/data/match_settings.lua`, `src/data/session_scores.lua`, `src/sim/*`, `src/util/*`.
-
-**Typical additions (architect-aligned):**
-
-```text
-assets/fonts/
-assets/ui/
+```
+assets/sprites/          # mole_*, rocket, grenade, ui_icon_*  (see ASSETS.md)
 src/app.lua
 src/scenes/menu.lua
 src/scenes/match_setup.lua
 src/scenes/play.lua
 src/scenes/pause.lua
 src/scenes/match_end.lua
-src/scenes/round_end.lua   # optional
 src/ui/hud.lua
-src/ui/widgets/
+src/util/viewport.lua
+src/util/gamepad_menu.lua
 src/input/input_manager.lua
+src/input/keyboard_mouse.lua
+src/input/gamepad.lua
+src/data/match_settings.lua
+src/data/session_scores.lua
+src/config.defaults.lua
 ```
 
-UI must **not** reimplement **`match_settings.validate`** — commit via **`merge_partial`**.
+**Reasonable additions (optional):** `assets/fonts/`, `src/ui/widgets/*.lua` if splitting `hud.lua`; **`assets/audio/`** per **`src/audio/sfx.lua`** / README.
 
 ---
 
-## 8. Component breakdown (responsibilities)
+## 8. Component breakdown (map to code)
 
-| Component | Role |
-|-----------|------|
-| `SessionScoreChip` | `session_scores.get_snapshot()` |
-| `MatchSettingsForm` | Edits §3.2 fields → partial for `merge_partial` |
-| `InputModeSelector` | `input_mode` + device warnings |
-| `TurnBanner` | `TurnView` + team colors |
-| `TurnTimerReadout` | `turn_time_left` / hidden if off |
-| `WindReadout` | `match_settings.wind` + wind rose |
-| `WeaponPanel` | `CombatHudView` |
-| `RosterBar` | `RosterView` |
-| `PauseMenu` | §3.4 |
-| `ConfirmDialog` | Forfeit (recommended) |
-| `MatchResultsPanel` | §3.5 + session update |
-| `HowToPlayOverlay` | KB + gamepad diagrams |
-| `LoadingBanner` | “Digging tunnel…” between setup and play |
+| Spec name | Implementation anchor |
+|-----------|------------------------|
+| `SessionScoreChip` | `hud.draw_session_line`; `menu` session rect |
+| `MatchSettingsForm` | `match_setup` rows + `draft` table |
+| `TurnBanner` | `hud.draw_turn_banner` |
+| `WeaponPanel` | `hud.draw_weapon_panel` |
+| `WindReadout` | `hud.draw_wind_timer` |
+| `HelpStrip` | `hud.draw_help_strip` |
+| `RosterBar` | `hud.draw_roster` |
+| `TurnToast` | `play.lua` toast_t / toast_msg |
+| `PauseMenu` | `pause.lua` |
+| `MatchResultsPanel` | `match_end.lua` |
+| `HowToPlayOverlay` | `show_howto` in `menu.lua` / `pause.lua` |
+| `GamepadMenuNav` | `util/gamepad_menu.lua` |
 
 ---
 
 ## 9. Dependencies & technology
 
-- **LÖVE 11.4** (`conf.lua`).
-- **≤ 2 font families** (display + UI).
+- **LÖVE 11.4**; **nearest** filtering on sprites (`app.load`).
+- **Procedural SFX** `src/audio/sfx.lua` (optional recorded assets later).
 
 ---
 
 ## 10. Implementation notes for Coding Agent
 
-1. Route **mouse** to aim only when **`input_mode == shared_kb`** and local player == **`turn_state.active_player`**.
-2. **Focus:** menus use UI focus; **Play** uses world input unless pause.
-3. **Draw order:** Pause > toasts > HUD > world.
-4. Roster **slot index** is stable identity (R7/R8).
-5. **`record_match_outcome`** once per match end / forfeit.
-6. Colors: **`require("config.defaults").colors.team1` / `team2`**.
-7. **`main.lua`** forwards joystick events — pause on **Start** for active gamepad side when in Play.
+1. **HUD changes:** Edit **`src/ui/hud.lua`** only for layout/constants; keep **`viewport`** logical coords consistent with **`app.draw`** transform.
+2. **New HUD rows:** Avoid overlapping **y 532–716** band (help + roster) without resizing **`draw_roster`** / **`draw_help_strip`**.
+3. **Input docs:** Keep **`README.md`** in sync with **`keyboard_mouse.lua`** / **`gamepad.lua`** (source of truth).
+4. **match_setup UX:** If adding columns, preserve **`match_settings.validate`** on commit.
+5. **Forfeit / win:** Do not double-call **`record_match_outcome`** for the same match (current paths: win in `play`, forfeit in `quit_match_to_results`).
 
 ---
 
@@ -411,58 +321,52 @@ UI must **not** reimplement **`match_settings.validate`** — commit via **`merg
 ```json
 {
   "userFlows": {
-    "coldStart": ["Title → MatchSetup → validate → Play", "Title → Play if profile exists"],
-    "inMatch": ["Turn HUD → move/aim → fire → resolve → end turn → next"],
-    "timer": ["turn_time_left visible; at 0 auto end_turn + toast"],
-    "pause": ["Esc|Start → Pause → Resume|HowToPlay|Forfeit|Quit"],
-    "forfeit": ["Confirm → opponent wins → MatchResults → record_match_outcome"],
-    "matchEnd": ["Win/draw → MatchResults → Rematch|Setup|Title"]
+    "title": ["Menu → Play | MatchSetup | HowTo | Quit"],
+    "setup": ["Rows: health, first, FF, timer, seed, input, wind → Enter/A → Play"],
+    "play": ["HUD + toast; Esc/Start → Pause; win → MatchEnd"],
+    "pause": ["Resume | HowTo | Forfeit+confirm | QuitToTitle"],
+    "results": ["Rematch | NewSetup(S/X) | Title(Esc/B)"]
   },
   "wireframes": {
-    "baseResolution": [1280, 720],
-    "minWindow": [960, 540],
-    "scene_title": { "sessionChip": [40, 40, 520, 120], "actions": [440, 420, 400, 140], "titleCard": [440, 180, 400, 280] },
-    "scene_match_setup": { "p1": [40, 112, 580, 520], "p2": [660, 112, 580, 520], "footer": [40, 656, 1200, 48], "header": [40, 32, 1200, 64] },
-    "scene_gameplay": { "turnBanner": [24, 16, 600, 88], "session": [656, 16, 600, 88], "weapon": [24, 104, 340, 200], "windTimer": [916, 104, 340, 200], "roster": [24, 620, 1232, 76] },
-    "overlay_pause": { "modal": [380, 180, 520, 360] },
-    "scene_match_results": { "headline": [240, 80, 800, 120], "stats": [240, 220, 800, 280], "actions": [240, 520, 800, 120] }
+    "logicalSize": [1280, 720],
+    "hud": {
+      "turnBanner": [20, 10, 600, 96],
+      "sessionLine": [636, 10, 624, 96],
+      "weaponPanel": [20, 114, 328, 200],
+      "windPanel": [932, 114, 328, 200],
+      "helpStrip": [24, 532, 1232, 64],
+      "roster": [20, 604, 1240, 108],
+      "turnToast": [400, 312, 480, 56]
+    },
+    "pauseModal": [380, 180, 520, 360],
+    "matchEndCard": [240, 80, 800, 520]
   },
-  "interactions": { "inputModes": ["shared_kb", "dual_gamepad"], "kbm": "§5.2", "pad": "§5.3", "menuNav": "§5.5" },
+  "interactions": {
+    "shared_kb": "§5.2",
+    "dual_gamepad_play": "§5.3",
+    "startButton": "pause toggle via app.gamepadpressed",
+    "menuGamepad": "gamepad_menu first pad; A confirm; B back"
+  },
   "accessibility": "§6",
-  "components": "§8"
+  "assets": "ASSETS.md"
 }
 ```
 
 ---
 
-## 12. Requirements / DESIGN.md crosswalk
+## 12. Requirements crosswalk
 
-| Req | UX |
-|-----|-----|
-| R1 | §1.1, §3.3, §6 |
-| R2–R3 | §3.3 |
-| R4 | §3, §4 |
-| R5 | §1.3 MapMetaView, `map_seed` |
-| R6 | §0, §3.1, §3.5, §10 |
-| R7–R8 | §3.2–3.3, §4, `turn_state` |
-| R9 | §3.2 |
-| R10–R11 | §5 |
-
----
-
-## 13. Merge checklist for root `DESIGN.md` (orchestrator)
-
-When merging into **`DESIGN.md`**, ensure the following **subsections** exist verbatim (same technical content; headings may be renumbered):
-
-1. **Resolution & safe areas** — §2  
-2. **Wireframes** — full §3 including **element inventories** and pause/results modals  
-3. **User flows** — full §4 including **mermaid** diagram, pause, forfeit, rematch  
-4. **Input** — §5 (all subsections)  
-5. **Accessibility** — §6  
-6. **UI file tree & components** — §7–§8  
-7. **Optional:** §11 JSON for tooling  
-
-Do **not** merge only a one-paragraph summary; that was the source of an incomplete unified design.
+| Req | UX evidence |
+|-----|-------------|
+| R1 | `ASSETS.md`, `hud` styling, `mole_draw` |
+| R2–R3 | Weapon panel + world projectiles |
+| R4 | Turn banner, toast, hotseat |
+| R5 | Seed in setup + match_end *Map seed used* |
+| R6 | `session_scores` + HUD + match_end |
+| R7–R8 | Roster slots; `turn_state` + toast |
+| R9 | `match_setup` rows |
+| R10 | §5.2 + help strip |
+| R11 | §5.3 + dual warning |
 
 ---
 
