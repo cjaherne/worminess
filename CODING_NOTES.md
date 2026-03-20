@@ -57,6 +57,14 @@ Window **focus**: `love.focus` → `app.focus` mutes `love.audio` when the game 
 
 - Smoke-tested with **LÖVE 11.5** (`love.exe` on this machine); `conf.lua` targets **11.4** per design — 11.5 is API-compatible for this project.
 
+## REQUIREMENTS.md — pipeline slice (R1–R3, `config.defaults`)
+
+| ID | Status |
+|----|--------|
+| **R1** | **Done.** Root cause: LÖVE/Lua map `require("config.defaults")` to **`src/config/defaults.lua`** under `src/?.lua`; a flat **`src/config.defaults.lua`** never matched that pattern. |
+| **R2** | **Done.** Defaults live in **`src/config/defaults.lua`**; **`spec/spec_helper.lua`** and **`tools/release-check.mjs`** updated; **`TESTING.md`** / **`ASSETS.md`** paths aligned. Call sites keep `require("config.defaults")`. |
+| **R3** | **Done.** `npm run build` passes and **`src/config/defaults.lua`** is enforced by **`tools/release-check.mjs`**. No Lua/Busted CLI on `PATH` in this environment; **`love.exe`** is present (`C:\Program Files\LOVE\love.exe`) for manual `love .` smoke. |
+
 ## Requirements traceability (R1–R11)
 
 | ID | Status |

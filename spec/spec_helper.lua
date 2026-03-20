@@ -7,11 +7,11 @@ local function path_join(a, b, c)
   return a .. sep .. b .. (c and (sep .. c) or "")
 end
 
---- Resolve repo root: directory that contains src/config.defaults.lua
+--- Resolve repo root: directory that contains src/config/defaults.lua
 local function repo_root()
   local env = os.getenv("WORMINESS_ROOT")
   if env and env ~= "" then
-    local probe = path_join(env, "src", "config.defaults.lua")
+    local probe = path_join(path_join(env, "src", "config"), "defaults.lua")
     local f = io.open(probe, "r")
     if f then
       f:close()
@@ -29,7 +29,7 @@ local function repo_root()
       s = s:sub(2):gsub("\\", "/")
       local dir = s:match("^(.+)/[^/]+$")
       while dir do
-        local rel = dir .. "/src/config.defaults.lua"
+        local rel = dir .. "/src/config/defaults.lua"
         local probe = rel:gsub("/", sep)
         local f = io.open(probe, "r")
         if f then
@@ -41,7 +41,7 @@ local function repo_root()
     end
   end
 
-  local f = io.open(path_join(".", "src", "config.defaults.lua"), "r")
+  local f = io.open(path_join(path_join(path_join(".", "src"), "config"), "defaults.lua"), "r")
   if f then
     f:close()
     return "."
@@ -52,8 +52,8 @@ end
 
 local root = repo_root()
 
--- Lua 5.x require maps "a.b" to a/b on package.path; LÖVE uses src/?.lua so config.defaults -> src/config.defaults.lua
-local config_defaults_path = path_join(root, "src", "config.defaults.lua")
+-- LÖVE / Lua: dotted module names map to nested paths under src/?.lua — config.defaults -> src/config/defaults.lua
+local config_defaults_path = path_join(path_join(root, "src", "config"), "defaults.lua")
 package.preload["config.defaults"] = function()
   return assert(loadfile(config_defaults_path))()
 end

@@ -2,7 +2,7 @@
 
 ## Automated unit tests (Busted)
 
-Pure Lua modules are covered with **[busted](https://lunarmodules.github.io/busted/)** specs under `spec/`. The helper `spec/spec_helper.lua` mirrors LÖVE’s `src/` require layout and registers `package.preload["config.defaults"]` so stock Lua resolves `src/config.defaults.lua` (Lua’s loader maps `config.defaults` to `config/defaults.lua` by default).
+Pure Lua modules are covered with **[busted](https://lunarmodules.github.io/busted/)** specs under `spec/`. The helper `spec/spec_helper.lua` mirrors LÖVE’s `src/` require layout (including `src/config/defaults.lua` for `require("config.defaults")`) and registers `package.preload["config.defaults"]` so CLI Lua loads the same file as LÖVE regardless of cwd edge cases.
 
 **Config:** `.busted` sets `helper` and disables **`auto-insulate`** so each spec file shares the same `package.*` (otherwise the helper’s loaders would not apply to insulated files).
 

@@ -10,7 +10,7 @@ Shipped sprites are **1024×1024** PNGs (procedural pixel art centered on a larg
 
 ## `generate_sprite` MCP (pipeline)
 
-The **`generate_sprite` MCP** tool is **not exposed in this agent runtime**, so **DALL·E 3 was not invoked** this pass. Existing **`assets/sprites/*.png`** are unchanged. Regenerate with consistent **pixel-art, limited-palette** prompts (earth tones + **team1 / team2** accents from **`src/config/defaults.lua`** — see **DESIGN.md** if the repo still uses the legacy flat **`src/config.defaults.lua`** filename until the config relocation lands).
+The **`generate_sprite` MCP** tool is **not exposed in this agent runtime**, so **DALL·E 3 was not invoked** this pass. Existing **`assets/sprites/*.png`** are unchanged. Regenerate with consistent **pixel-art, limited-palette** prompts (earth tones + **team1 / team2** accents from **`src/config/defaults.lua`**, loaded as **`require("config.defaults")`**).
 
 ---
 

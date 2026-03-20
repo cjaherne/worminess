@@ -96,7 +96,7 @@
       "purpose": "Handles the creation of procedural sound effects for the game."
     },
     {
-      "path": "src/config.defaults.lua",
+      "path": "src/config/defaults.lua",
       "lines": 37,
       "purpose": "Defines default configuration settings for the game, including physics and gameplay parameters."
     },

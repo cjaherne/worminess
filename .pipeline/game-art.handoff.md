@@ -73,7 +73,7 @@ Scales in **`ASSETS.md`** match **`mole_draw.lua`** (`SPR_SCALE` **0.058**, rock
 
 ## Files updated
 
-1. **`ASSETS.md`** — Single manifest: resolution/scaling, MCP/DALL·E alpha warning, palette note pointing at **`src/config/defaults.lua`** per **DESIGN.md** (with a note that **`src/config.defaults.lua`** may still exist until the coding task moves the file), full table **path → `app.assets` key → use → suggested vs implemented scale**, gaps, and requirements note (R1–R3 vs **CODING_NOTES** for presentation).
+1. **`ASSETS.md`** — Single manifest: resolution/scaling, MCP/DALL·E alpha warning, palette note pointing at **`src/config/defaults.lua`** (`require("config.defaults")`), full table **path → `app.assets` key → use → suggested vs implemented scale**, gaps, and requirements note (R1–R3 vs **CODING_NOTES** for presentation).
 2. **`.pipeline/game-art.handoff.md`** — Short handoff for this run: no MCP, outputs unchanged, follow-up when **`generate_sprite`** exists.
 
 If you want DALL·E replacements later, enable the **`generate_sprite`** MCP in Cursor and we can re-run prompts against the same **`assets/sprites/*.png`** paths; you’ll likely tweak **`SPR_SCALE`** and HUD **`0.42`** after swapping art.
