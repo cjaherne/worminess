@@ -1,6 +1,8 @@
 # Moles
 
-Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.4**.
+Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.4**. Each team fields **five** moles; players alternate each turn, and the active **mole slot** advances so everyone gets a turn before the roster repeats.
+
+**Version:** see `package.json` (`version` field). Automated checks: `npm run build` from the repo root (verifies core files are present).
 
 ## Session loop
 
@@ -11,6 +13,10 @@ Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.
 - **Terrain:** Each match builds a new **procedural** heightfield in **`src/sim/terrain_gen.lua`** (seed from setup or random), destructible via explosions in **`src/sim/terrain.lua`** / **`damage.lua`**.
 - **Weapons:** **Rocket** (fast, impact) vs **grenade** (arc, timed fuse, bounce) in **`src/sim/weapons/`**, integrated in **`src/sim/world.lua`**.
 - **Turns:** Two local players alternate; one mole per turn; **end turn** after moving/firing — see **`src/sim/turn_state.lua`**.
+
+## Match setup (options)
+
+From **Match setup** before play you can tune **mole max HP**, **first player** (P1 / P2 / random), **friendly fire**, **turn time limit** (or off), **map seed** (blank = random procedural map), **wind** strength, and **input mode** — shared **keyboard + mouse** or **two gamepads** (first two joysticks). Roster size is fixed at five moles per team for this build.
 
 ## Run
 
