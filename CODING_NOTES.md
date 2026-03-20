@@ -8,6 +8,13 @@
 - **UX vs Designer controls:** Part A and Part B specify different key bindings for shared keyboard; the merged doc does not pick a single normative table. Implementation follows Designer P1/P2 columns for movement/aim/fire/end, with explicit power keys documented in `README.md`.
 - **Enter as P2 fire (play scene only):** `Return` / `kpenter` now arm grenades/rockets for player 2 during gameplay. If future in-match UI uses Enter to confirm actions, route those keys before `keyboard_mouse.on_keypressed` or narrow the binding.
 
+## Sub-task 3 — HUD, polish, turn sync (implemented)
+
+- **HUD:** Turn banner shows **player, team label, active slot, HP, phase line**, and **turn timer** when enabled. **Session scores** use three **chips** (P1 / P2 / draws) plus matches played. **Weapon panel** highlights selected weapon, shows **live grenade fuse** when one is in flight, and clearer power bar. **Wind** panel shows drift direction hint. **Roster** shows **per-slot HP numbers**, thicker **2px-style active highlight** on the current mole, and **“S1…S5”** labels.
+- **Visual polish:** Moles get **drop shadows**, **team-tinted ground ellipse**, **dimmed non-active team** during the other player’s turn, stronger **active ring**. Rockets get **orange trail**, **glow**, and **streak line**; grenades get **fuse arc**, **orbiting spark**, **pulsing outline**, and shadow.
+- **Turn rotation:** `world.update` now calls **`turn:sync_slots_to_living`** after HP/death resolution so if the **active mole dies mid-shot**, the roster pointer **rebinds to a living slot** before input/physics (still follows `turn_state` ring advance on **end turn**).
+- **Match setup:** Read-only row **“5 moles per team (fixed for v1)”** documents R7 for players configuring a match.
+
 ## Sub-task 2 — terrain, combat, two-player (implemented)
 
 - **Procedural terrain:** `terrain_gen.lua` uses **smoothed columns**, **domain warp**, extra **ridge** detail, and a mild **left/right bias**; **72** retries for valid spawn plateaus.
@@ -31,7 +38,7 @@
 
 | ID | Status |
 |----|--------|
-| R1 presentation | Menus, sky/terrain palette, scaled sprites, HUD panels |
+| R1 presentation | Menus, sky/terrain palette, scaled sprites, expanded HUD (scores/HP/turn), mole & projectile polish |
 | R2 rocket | `src/sim/weapons/rocket.lua` + world integration |
 | R3 grenade | `src/sim/weapons/grenade.lua` + fuse + HUD |
 | R4 2P local | Hotseat play scene, two teams |

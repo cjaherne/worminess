@@ -60,7 +60,7 @@ function M.draw(app)
   local active = w.turn:active_mole(w.moles)
   for _, m in ipairs(w.moles) do
     local is_active = (m == active) and not w.won
-    mole_draw.draw_mole(app.assets, m, w.aim_angle, is_active)
+    mole_draw.draw_mole(app.assets, m, w.aim_angle, is_active, w.turn.active_player)
   end
   mole_draw.draw_projectiles(app.assets, w.projectiles)
   if active and active.alive and #w.projectiles == 0 and not w.fired_this_turn then

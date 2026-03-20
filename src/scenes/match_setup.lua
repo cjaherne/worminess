@@ -7,6 +7,7 @@ local focus = 1
 local seed_buf = ""
 
 local rows = {
+  { label = "Roster size", kind = "readonly", text = "5 moles per team (fixed for v1)" },
   { key = "mole_max_hp", label = "Mole health", kind = "step", step = 10, min = 10, max = 500 },
   { key = "first_player", label = "First turn", kind = "first" },
   { key = "friendly_fire", label = "Friendly fire", kind = "bool" },
@@ -54,7 +55,9 @@ function M.draw(app)
     love.graphics.rectangle("fill", 40, y, 1180, 52, 8, 8)
     love.graphics.setColor(0.92, 0.93, 0.96, 1)
     local val = ""
-    if row.kind == "step" then
+    if row.kind == "readonly" then
+      val = row.text or ""
+    elseif row.kind == "step" then
       val = tostring(draft[row.key])
     elseif row.kind == "first" then
       val = tostring(draft.first_player)
@@ -139,7 +142,9 @@ function M.keypressed(app, key)
   elseif key == "backspace" and row and row.kind == "seed" then
     seed_buf = seed_buf:sub(1, -2)
   elseif key == "left" or key == "a" then
-    if row.kind == "step" then
+    if row.kind == "readonly" then
+      -- no-op
+    elseif row.kind == "step" then
       draft[row.key] = math.max(row.min, draft[row.key] - row.step)
     elseif row.kind == "first" then
       cycle_first()
@@ -153,7 +158,9 @@ function M.keypressed(app, key)
       cycle_wind()
     end
   elseif key == "right" or key == "d" then
-    if row.kind == "step" then
+    if row.kind == "readonly" then
+      -- no-op
+    elseif row.kind == "step" then
       draft[row.key] = math.min(row.max, draft[row.key] + row.step)
     elseif row.kind == "first" then
       cycle_first()

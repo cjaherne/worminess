@@ -27,6 +27,12 @@ Connect two controllers. **Player 1** uses the first joystick in `love.joystick.
 
 - Left stick: move · **A**: jump · **Right stick**: aim · **Triggers**: power · **B**: fire · **LB/RB**: cycle weapon · **Y**: end turn · **Start**: pause / resume pause menu.
 
+## HUD (in match)
+
+- **Top left:** whose turn it is, team, active mole **slot**, current mole **HP**, phase hint, optional **turn timer**.
+- **Top right:** **session wins** for P1 / P2 and **draws** (since launch), plus total matches finished.
+- **Lower panels:** weapon selection, aim angle, power; wind readout; **roster** with HP bars and numeric HP per slot (active mole outlined).
+
 ## Project layout
 
 - `main.lua` / `conf.lua` — entry and window (1280×720 logical, resizable).

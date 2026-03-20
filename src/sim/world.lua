@@ -213,6 +213,8 @@ function M:update(dt, intents, cam_mx, cam_my, use_mouse_aim)
   for _, m in ipairs(self.moles) do
     if m.hp <= 0 then m.alive = false end
   end
+  --- Keep roster slots aligned with living moles (active mole can die mid-flight).
+  self.turn:sync_slots_to_living(self.moles)
 
   local active = self.turn:active_mole(self.moles)
   local ap = self.turn.active_player
