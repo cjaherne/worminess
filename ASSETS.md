@@ -1,50 +1,53 @@
 # Asset manifest — Moles (Worms-like)
 
-All raster paths are **repo-relative**. Images are **PNG** with **RGBA** where noted; empty regions are **fully transparent** (alpha = 0).
+All raster paths are **repo-relative**. Images are **PNG** with **RGBA**; unused canvas pixels are **transparent** (alpha = 0).
 
-## Resolution note (scaling in LÖVE)
+## DALL·E / resolution (for coders)
 
-- **World sprites** (`mole_*`, `rocket.png`, `grenade.png`) are **1024×1024** canvases with the subject centered and large. This matches the **nominal “full artboard” size** you would get from typical **DALL·E 3** square outputs (~1024 px). **Scale down** in-game with `love.graphics.draw(image, x, y, r, sx, sy, ...)` (or a camera/world scale) so on-screen moles land near the design target (**~32–48 px tall** in **1280×720** logical space per `DESIGN.md`).
-- **HUD icons** are **128×128** for crisp UI at the UX wireframe sizes (~340×200 weapon panel); scale as needed (often **0.35–0.6** in logical px height ≈ **45–80 px**).
+Sprites are authored on **large square boards** (**1024×1024** for world art), the same **order of magnitude** as typical **OpenAI DALL·E 3** square exports (~1024 px). **Always scale at draw time** with `love.graphics.draw(image, x, y, rotation, sx, sy, ox, oy)` (or your camera’s world scale) — do **not** assume 1 texture pixel = 1 world unit.
 
-**Transparency:** These PNGs use **true alpha** on unused canvas area—**no chroma-key** required. If you replace any file with **DALL·E** exports, those are often **opaque**; trim or key the background as needed.
+**DALL·E caveat:** Real DALL·E outputs are often **fully opaque**; these shipped PNGs already use **alpha**. If you **replace** any file with MCP-generated art, plan to **chroma-key, trim**, or edit alpha as needed.
 
-## Tooling note (this pipeline run)
+## `generate_sprite` MCP (pipeline)
 
-The **`generate_sprite` MCP** (DALL·E 3) was **not available** in this agent session. Sprites were produced with **`node tools/gen_sprites.mjs`** (chunky **pixel-style** art, **limited palette**) aligned to `src/config.defaults.lua` **team colors** (team A ≈ cyan `colors.team1`, team B ≈ coral `colors.team2`). Re-run that script after editing grids in the tool file, or **swap in** MCP-generated PNGs at the **same paths** when the tool is enabled.
+The **`generate_sprite` MCP** tool is **not exposed to this agent runtime**, so **DALL·E 3 could not be invoked** here. Current files come from **`node tools/gen_sprites.mjs`** (reproducible pixel-style grids, palette aligned to `src/config.defaults.lua` **team1 / team2** hues). When MCP is available, regenerate into the **same paths** listed below.
 
 ---
 
-## Table — path → use → suggested scale
+## Table — file → `app.assets` key → use → scale
 
-| Path | Intended use | Suggested draw scale (starting point) |
-|------|----------------|--------------------------------------|
-| `assets/sprites/mole_team_a_idle.png` | Player 1 / **Team A** mole — **idle** | `sx, sy` ≈ **0.05–0.07** for ~36–48 px tall on 720p logical |
-| `assets/sprites/mole_team_b_idle.png` | Player 2 / **Team B** mole — **idle** | same as team A |
-| `assets/sprites/mole_team_a_aim.png` | Team A — **aim / combat stance** (V1 same pose as idle; hook for future) | same |
-| `assets/sprites/mole_team_b_aim.png` | Team B — **aim / combat stance** | same |
-| `assets/sprites/mole_team_a_walk_1.png` | Team A — **walk** frame 1 | same; alternate with `_walk_2` for bob/cycle |
-| `assets/sprites/mole_team_a_walk_2.png` | Team A — **walk** frame 2 | same |
-| `assets/sprites/mole_team_b_walk_1.png` | Team B — **walk** frame 1 | same |
-| `assets/sprites/mole_team_b_walk_2.png` | Team B — **walk** frame 2 | same |
-| `assets/sprites/rocket.png` | **Rocket** projectile in-world; elongated orange/red body per `DESIGN.md` | **0.04–0.08** (small fast silhouette); tune to `weapon.rocket_radius` |
-| `assets/sprites/grenade.png` | **Grenade** projectile; round, green shell, fuse pixel | **0.05–0.09**; pair with fuse VFX / shader |
-| `assets/sprites/ui_icon_rocket.png` | **Weapon panel** — rocket **selected / unselected** icon (`DESIGN.md` §3.3) | **0.4–0.55** of icon height in logical px (~56–72 px tall) |
-| `assets/sprites/ui_icon_grenade.png` | **Weapon panel** — grenade icon | same |
-| `assets/sprites/ui_icon_wind.png` | **Wind readout** arrow / rose (`DESIGN.md` UX — wind Low/Med/High) | **0.35–0.5** |
+`app.assets` keys are set in **`src/app.lua`** (`love.graphics.newImage`).
+
+| Path | `app.assets` key | Intended use | Suggested scale (design target ~32–48 px moles) | **As implemented** (reference) |
+|------|------------------|--------------|-----------------------------------------------|------------------------------|
+| `assets/sprites/mole_team_a_idle.png` | `mole_a_idle` | P1 / **Team A** — idle | `sx, sy` ≈ **0.05–0.07** | **`SPR_SCALE` 0.058** in `src/render/mole_draw.lua` (`sx` × **facing**) |
+| `assets/sprites/mole_team_b_idle.png` | `mole_b_idle` | P2 / **Team B** — idle | same | same |
+| `assets/sprites/mole_team_a_aim.png` | `mole_a_aim` | Team A — aim overlay (rotated with aim) | same | **0.95 ×** mole scale, rotated `aim_angle + π/2` |
+| `assets/sprites/mole_team_b_aim.png` | `mole_b_aim` | Team B — aim overlay | same | same |
+| `assets/sprites/mole_team_a_walk_1.png` | `mole_a_walk_1` | Team A — walk frame 1 | same | alternates with `_walk_2` when `|vx| > 12` |
+| `assets/sprites/mole_team_a_walk_2.png` | `mole_a_walk_2` | Team A — walk frame 2 | same | same |
+| `assets/sprites/mole_team_b_walk_1.png` | `mole_b_walk_1` | Team B — walk frame 1 | same | same |
+| `assets/sprites/mole_team_b_walk_2.png` | `mole_b_walk_2` | Team B — walk frame 2 | same | same |
+| `assets/sprites/rocket.png` | `rocket` | In-world **rocket** | **0.04–0.08** | **0.065**, origin center (`mole_draw.lua`) |
+| `assets/sprites/grenade.png` | `grenade` | In-world **grenade** | **0.05–0.09** | **0.068 × fuse pulse**, origin center |
+| `assets/sprites/ui_icon_rocket.png` | `ui_icon_rocket` | HUD weapon column — rocket | **0.35–0.55** of 128 px art → ~45–70 px | **`0.42`** in `src/ui/hud.lua` (`draw_weapon_panel`) |
+| `assets/sprites/ui_icon_grenade.png` | `ui_icon_grenade` | HUD — grenade | same | **`0.42`** |
+| `assets/sprites/ui_icon_wind.png` | `ui_icon_wind` | Wind panel icon | same | **`0.42`** at `(952, 132)` in `draw_wind_timer` |
+
+**Mole anchor:** `ox = width×0.5`, `oy = height×0.85` — feet near **`m.x, m.y`** (see `mole_draw.lua`).
 
 ---
 
 ## Gaps / optional follow-ups
 
-- **Audio** (`assets/audio/*`), **fonts** (`assets/fonts/*`), **title background**, **explosion / particles**, **hurt / death** mole frames — not in this pass; coder may use primitives or add art later.
-- **Terrain** is expected to be **procedural / mask** at runtime (`terrain_gen`); no `terrain_tileset.png` shipped unless you add one.
+- **`assets/audio/*`**, **`assets/fonts/*`**, title **logo / background** art, **explosion** sheets, mole **hurt / death** frames — not shipped; SFX are procedural (`src/audio/sfx.lua`).
+- **Terrain** is **runtime mask / proc gen** — no `terrain_tileset.png` in v1.
 
 ---
 
 ## Requirements touchpoints
 
-- **R1** (presentation): Cohesive **pixel** look, **team-readable** accents, distinct **rocket vs grenade** reads.
-- **R2 / R3**: Dedicated **rocket** and **grenade** sprites + **HUD icons**.
-- **R6**: No art; session scores are data-only.
-- **R10 / R11**: **Weapon** and **wind** icons support HUD clarity for shared KB+M and gamepad modes.
+- **R1**: Readable **pixel** identity, team accents, distinct weapons.
+- **R2 / R3**: Rocket + grenade **world** sprites and **HUD** icons.
+- **R6**: No art.
+- **R10 / R11**: HUD icons support **shared KB+M** and **gamepad** play clarity.
