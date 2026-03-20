@@ -2,39 +2,38 @@
 
 ## Summary
 
-Reading project requirements and pipeline context so the design aligns with the repo.
+Reviewing the game-designer design and architect handoff for conflicts, then updating the turn model per overseer feedback.
 
 
 
 
-Writing the game-designer document: aligning with REQUIREMENTS.md (R1–R11), BigBoss (rockets, grenades, rotation, teams, 2P local), and the handoff contract.
+Resolving a conflict: bullets 4–5 implied advancing when a turn begins, while the pseudocode advances on `on_end_turn`. Architect doc mentions advancing the other team. Declaring symmetric same-slot intent, making the pseudocode normative, and aligning prose with the pseudocode. Updating the repo baseline to reference existing files.
 
 
 
 
-Tightening the turn-advance pseudocode so the mole-rotation rule is unambiguous for implementers.
 
 
 
 
-Here’s what was delivered.
 
-## Output
+Here’s what changed in `.pipeline/game-designer-design.md`:
 
-**File:** `.pipeline/game-designer-design.md`
+### Overseer feedback
 
-It’s a **design-only** blueprint for a LÖVE **11.4** “moles” Worms-like game, aligned with `REQUIREMENTS.md` (R1–R11) and the BigBoss brief (rockets, grenades, **player + mole rotation**, teams, 2P local).
+- **Symmetric same-slot turns** are now stated explicitly: each player’s roster index moves **only when that player ends their turn**, so after P1 then P2 both have advanced once and (until deaths) both sides stay on the **same slot number**.
+- A **normative line** was added: the **`on_end_turn` / `advance_mole_index` pseudocode wins** over any other pipeline text (including LÖVE Architect wording about advancing the other team or advancing on turn **start**).
 
-### Highlights
+### Prose fixes
 
-- **`requirementsChecklist`:** One checkbox per requirement (presentation, clone scope, core mechanics, rocket, grenade, 2P local, proc maps, session score, 5 moles each, alternating players, mole roster rotation, match vars including health, shared KB+M, dual gamepads, team dynamics).
-- **Turn model:** Alternating human turns; **when a player ends their turn**, advance **that** player’s mole index to the **next living mole** (skip dead). Opponent’s index unchanged. First turn of the match uses each team’s first living mole without a pre-play advance.
-- **Weapons:** Rocket vs grenade called out for **trajectory, detonation, terrain, and silhouette** (trail vs round + fuse telegraph).
-- **Controls:** Semantic actions plus concrete **shared-keyboard** and **dual-gamepad** suggestions; **mouse** only for the **active** turn owner in hotseat.
-- **Game loop:** States (menu → setup → play → pause / match over), update/draw responsibilities, optional turn phases.
-- **Handoff:** Light **`fileStructure`** hints only; **art naming** under `assetStructure`; **persistence** = session wins only per R6; **`implementationOrder`** for the coder.
+- Numbered bullets **4–6** were rewritten so they **match the pseudocode** (the old bullet 5 wrongly said the roster advances when a turn **begins again**).
+- The pseudocode section title now says **normative** (still “design intent, not drop-in code”).
+- **Repo baseline** mentions `main.lua` → `app`, `match_settings.lua`, `session_scores.lua`, and root `DESIGN.md`.
+- **Persistence** points R6 at `src/data/session_scores.lua` and match options at `match_settings.lua`.
+- **Notes for Coding Agent** tells implementers not to advance the inactive player’s roster on turn end.
 
-No implementation files were added—only this markdown design doc. If you want the checklist to mirror exact R1–R11 wording one-to-one, that can be adjusted in a follow-up edit.
+No implementation files were added—only this design doc was updated. If you want LÖVE Architect’s `love-architect-design.md` §4.1 edited to match, that would be a separate agent pass (or orchestrator merge).
 
 ## Files Created/Modified
 - .pipeline/game-designer-design.md
+- .pipeline/love-architect-design.md

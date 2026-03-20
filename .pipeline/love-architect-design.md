@@ -86,9 +86,9 @@ project root/
       match_end.lua
 
     input/
-      input_manager.lua    -- aggregates devices, produces intents per slot
-      keyboard_mouse.lua   -- P1 mouse aim + keys; P2 keys-only profile
-      gamepad.lua          -- per-joystick mapping for P1/P2
+      input_manager.lua    -- aggregates devices; applies turn_owner + input_mode policy
+      keyboard_mouse.lua   -- shared_kb: dual keymaps on one KB; mouse aim only when player == turn_player
+      gamepad.lua          -- dual_gamepad: per-joystick mapping for P1/P2
 
     sim/
       world.lua            -- World table: terrain, entities, projectiles; step()
