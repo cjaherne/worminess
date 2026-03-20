@@ -180,7 +180,7 @@ session_scores.get_snapshot()  -- for HUD / match end screen
 
 ### 3.4 `PlayerIntent` (R4, R10, R11)
 
-Per player slot, per frame:
+Per player slot, per frame (R10: non–turn-owner may still produce a table, but `input_manager` zeros gameplay fields or ignores mouse so only **turn owner** drives sim):
 
 ```lua
 PlayerIntent = {
