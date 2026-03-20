@@ -129,22 +129,24 @@ Edit in **`match_setup`**; always run **`match_config.validate(c)`** before **`p
 
 **Dual confirm (product brief):** two **`ready_p1` / `ready_p2`** booleans are **UI-local** until both true, then **Start match** enabled; aligns with **`DESIGN.md` — UX — §5.3 `match_setup`** and **§5.3** (this file).
 
-### 3.3 Turn + HUD presentation (`src/game/turn_state.lua` + roster + active mole)
+### 3.3 Turn + HUD presentation (`play_hud` context)
 
-| Field | UX use |
+**Drawer:** **`src/ui/hud/play_hud.lua`** — `draw(ctx)` expects a **ctx** table built in **`scenes/play`**. Bindings:
+
+| Source | UX use |
 |--------|--------|
-| `active_player` | 1 \| 2 — turn banner, which control legend to show |
-| `active_mole_slot` | Index into **`team.moles`** for active player’s team |
-| `phase` | `aim`, `firing`, `flying`, `round_end`, `interstitial` — HUD hints, pause certain inputs, **toasts** |
-| `move_budget` | Move “fuel” bar (from constants `MOVE_BUDGET_MAX`) |
-| `aim_angle`, `power`, `charging` | Aim reticle / power bar when `phase == aim` |
-| `weapon_index`, `weapons` | Strip highlight; label from **`require("game.turn_state").current_weapon_id(ts)`** → `rocket` \| `grenade` |
+| `ctx.turn` (`turn_state`) | `active_player`, `phase`, `move_budget`, `power`, `weapon_index`, `weapons`, optional `turn_time_left` |
+| `ctx.teams` + **`turn_state.active_mole(ts, teams)`** | Mole **index** for banner (living slot) |
+| `ctx.match_config` | Wind, `input_scheme`, HP cap for future HP bar |
+| `ctx.session` | **`session:get_scores()`** — label **“Session match wins”** (not round wins — **`DESIGN.md` — Session stats definition**) |
+| `ctx.round_wins[1]`, `ctx.round_wins[2]` | **Round wins within current match** — HUD corners (“P1 round wins” / “P2 round wins”); distinct from session |
+| `ctx.round_index` | Shown in center banner with player / mole / phase |
+| `ctx.toast_text` | When `phase == interstitial`, drives **§5.6** overlay copy |
+| `ctx.grenades` | First live grenade with `fuse > 0` → **“Grenade fuse: X.Xs”** string |
 
-**Per-mole:** `teams[active_player].moles[active_mole_slot].hp` vs `match_config.mole_max_hp` for **health pips** or numeric HP.
+**Wind display:** matches **`play_hud`**: “Wind: calm” or arrow + magnitude from `wind_strength`.
 
-**Wind display:** `match_config.wind_strength` (scalar); format as arrow + magnitude.
-
-**Round vs match score in HUD:** **Session** fields above are **not** round tallies (**`DESIGN.md` — Session stats definition**). If gameplay exposes “rounds won this match”, show separately (e.g. match HUD or `game_over`) without overloading `scores` / `matches_completed`.
+**Map cadence (UX copy):** When a new round generates terrain (**`DESIGN.md` — Map regeneration cadence**), optional one-line toast (“Round **N** — new map”) may reuse **`ctx.toast_text`** or interstitial timing—keep player expectation that **terrain is not carried round-to-round** unless product changes.
 
 ### 3.4 Input routing (menus + play)
 
