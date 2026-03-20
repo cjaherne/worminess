@@ -2,17 +2,12 @@
 
 ## Summary
 
-Reviewing the implementation for sub-task 2: procedural terrain, rocket/grenade combat, and two-player local play.
+Implementing sub-task 3: enhancing the HUD, polishing projectile and character visuals, and verifying turn rotation and match options. Reviewing the codebase.
 
 
 
 
-Enhancing procedural terrain generation, refining rocket/grenade combat (trajectories, hits, wind coupling), and strengthening two-player input (e.g. P2 Enter to fire).
-
-
-
-
-Implementing enhanced procedural terrain (smoothed multi-octave height, lateral bias), combat tweaks (rocket gravity, finer collision sampling, grenade escape from terrain), deterministic wind from the map seed, and clearer P2 fire bindings.
+Implementing HUD enhancements (scores, HP, turn phase), visual polish for moles and projectiles, syncing turn slots when moles die mid-match, and adding a read-only “5 moles per team” row in match setup.
 
 
 
@@ -22,6 +17,12 @@ Implementing enhanced procedural terrain (smoothed multi-octave height, lateral 
 
 
 
+Implementing changes: adding `turn:sync_slots_to_living` after mole deaths, then updating HUD, visuals, and match setup.
+
+
+
+
+Fixing `love.graphics.arc` call for LÖVE 11 API (no `"open"` parameter).
 
 
 
@@ -37,37 +38,58 @@ Implementing enhanced procedural terrain (smoothed multi-octave height, lateral 
 
 
 
-Here’s what sub-task **2 of 3** changed, building on what you already had.
 
-### Procedural terrain (`src/sim/terrain_gen.lua`)
 
-- Height is built **per column** from a **5-octave** sine stack plus **ridged** detail for clearer silhouettes.
-- **Domain warp** (lateral sine offset) mixes a second height sample so adjacent columns aren’t a simple sine.
-- **3-tap smoothing** reduces harsh jag and helps **spawn plateaus** stay valid.
-- **Left/right bias** breaks perfect symmetry between team sides.
-- **Retry cap** raised to **72** so “flat enough” P1/P2 strips are found more reliably.
 
-### Combat (`src/sim/world.lua`, `src/config.defaults.lua`)
 
-- **Rocket:** Applies **`rocket_gravity_mul`** (fraction of world gravity) each step so the path droops slightly, matching the “mild gravity” idea in the design.
-- **Rocket vs terrain/moles:** Uses **`rocket_ray_steps`** (default **56**) for the segment sweep.
-- **Grenade:** After a bounce, **`grenade_unstick_px`** nudges the projectile upward up to 10 steps so it’s less likely to sit inside solid cells.
-- **Wind:** `wind_vx` now keys off **`built.seed_used`**, so wind direction matches the **map that was actually generated**, including when `map_seed` is random in settings.
 
-### Second player / local multiplayer (`src/input/keyboard_mouse.lua`, docs)
 
-- Gameplay was already **two-team hotseat** with separate P1/P2 keys and **dual gamepad** mode.
-- **Player 2 fire** now also accepts **`Enter`**, **numpad Enter**, and **`Right Ctrl`** (on top of `;`), aligned with the design’s “Enter / Right Ctrl” options.
-- **`README.md`**, **`CODING_NOTES.md`**, and the in-game HUD hint line were updated; **Issues Found** notes a possible future clash if in-match UI starts using **Enter** for confirmations.
 
-`love .` was smoke-run again with no immediate startup failure. R1–R11 remain covered as in the existing traceability table; sub-task 2 details are under **`## Sub-task 2`** in **`CODING_NOTES.md`**.
+
+
+
+
+
+
+
+Here’s what sub-task **3 of 3** delivered.
+
+### HUD (`src/ui/hud.lua`)
+
+- **Turn banner:** Player number, **Team A/B**, **active slot**, **HP (current/max)**, a short **phase** line (resolving shot / reposition+end turn / move–aim–fire), plus **turn timer** when it’s enabled.
+- **Session scores:** Three **chips** for **P1 wins**, **P2 wins**, and **draws**, plus **matches finished** (R6).
+- **Weapon panel:** Clear **selection highlight**, rocket vs grenade label, **power bar**, and a **live grenade fuse** bar when a grenade is in the world.
+- **Wind panel:** Icon + strength label + **blowing left/right** and a large arrow.
+- **Roster:** **S1–S5**, **numeric HP** for living moles, stronger **2px-style outline** on the **active** mole (current player + slot), adjusted layout to fit **720p**.
+
+### Visual polish (`src/render/mole_draw.lua`, `play.lua`)
+
+- Moles: **shadow**, **team-colored ground ellipse**, **cooler tint** for the **non-active team**, clearer **active ring** and aim overlay.
+- **Rocket:** **Trailing embers**, **nose glow**, **streak** ahead of the sprite.
+- **Grenade:** **Fuse ring** (`love.graphics.arc` in LÖVE 11 form), **orbiting spark**, **pulsing** green outline + soft shadow.
+- **Aim preview:** Orange for rocket, green tint for grenade.
+
+### Turn rotation & living moles (`src/sim/world.lua`)
+
+- After applying **HP → alive**, the world calls **`turn:sync_slots_to_living`** so if the **current mole dies during a shot**, the active **slot jumps to a living mole** before movement/input. **End-turn** still uses the existing **`turn_state`** ring advance (R8).
+
+### Match options (`src/scenes/match_setup.lua`)
+
+- First row is **read-only**: **“5 moles per team (fixed for v1)”** so R7/R9 are visible in setup; **mole health** and the rest are unchanged.
+
+### Docs
+
+- **`README.md`** — short **HUD** section.
+- **`CODING_NOTES.md`** — **Sub-task 3** notes and **R1** traceability tweak.
+
+`love .` was smoke-run successfully after these edits.
 
 ## Files Created/Modified
 - CODING_NOTES.md
 - README.md
-- src/config.defaults.lua
-- src/input/keyboard_mouse.lua
-- src/sim/terrain_gen.lua
+- src/render/mole_draw.lua
+- src/scenes/match_setup.lua
+- src/scenes/play.lua
 - src/sim/world.lua
 - src/ui/hud.lua
 
