@@ -47,6 +47,7 @@ local function new(match_cfg)
     return {
       turn = self.turn,
       teams = self.teams,
+      team_turn_slot = self.team_turn_slot,
       terrain = self.terrain,
       match_config = self.cfg,
       projectiles = self.projectiles,
