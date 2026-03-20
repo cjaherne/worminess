@@ -61,9 +61,10 @@ function M.draw(ctx)
   )
 
   if ts.phase == turn_state.phases.interstitial and ctx.toast_text then
-    love.graphics.setColor(0, 0, 0, 0.45)
+    local pulse = 0.88 + 0.12 * math.sin(love.timer.getTime() * 2 * math.pi * 0.9)
+    love.graphics.setColor(0, 0, 0, 0.38 + 0.12 * pulse)
     love.graphics.rectangle("fill", 0, 200, lw, 120, 0, 0)
-    love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], 1)
+    love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], pulse)
     love.graphics.printf(ctx.toast_text, 40, 232, lw - 80, "center", 0, 1.05, 1.05)
   end
 
@@ -123,8 +124,9 @@ function M.draw(ctx)
   else
     hint = "Your turn: stick aim · A fire · LB/RB or triggers charge power · Start = pause (any pad)"
   end
-  love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.65)
-  love.graphics.printf(hint, 24, 568, lw - 48, "center", 0, 0.68, 0.68)
+  local hint_a = 0.58 + 0.2 * math.sin(love.timer.getTime() * 2 * math.pi * 0.75)
+  love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], hint_a)
+  love.graphics.printf(hint, 24, 568, lw - 48, "center", 0, 0.72, 0.72)
 
   if ts.turn_time_left then
     love.graphics.setColor(c.danger[1], c.danger[2], c.danger[3], 0.95)

@@ -7,7 +7,7 @@ local grenade_mod = require("entities.grenade")
 
 local M = {}
 
-local function update_mole_physics(m, terrain, dt)
+local function update_mole_physics(ctx, m, terrain, dt)
   if not m.alive then
     return
   end
@@ -19,7 +19,11 @@ local function update_mole_physics(m, terrain, dt)
   if m.grounded and m.vy > C.FALL_DAMAGE_THRESHOLD * dt then
     local dmg = (m.vy - C.FALL_DAMAGE_THRESHOLD * dt) * C.FALL_DAMAGE_MULT
     if dmg > 2 then
+      local hp0 = m.hp
       mole_ent.damage(m, dmg, true, m.team)
+      if ctx.feedback and ctx.feedback.on_moles_damaged and m.hp < hp0 then
+        ctx.feedback.on_moles_damaged(true)
+      end
     end
   end
 end
@@ -29,7 +33,7 @@ function M.update_moles(ctx, dt)
   local teams = ctx.teams
   for t = 1, #teams do
     for i = 1, #teams[t].moles do
-      update_mole_physics(teams[t].moles[i], terrain, dt)
+      update_mole_physics(ctx, teams[t].moles[i], terrain, dt)
     end
   end
 end
@@ -126,6 +130,13 @@ function M.update_grenades(ctx, dt)
           explosions.apply(ctx, g.pos.x, g.pos.y, def, g.owner_team)
           table.remove(list, i)
         else
+          g._trail_acc = (g._trail_acc or 0) + dt
+          if g._trail_acc >= 0.08 then
+            g._trail_acc = 0
+            if ctx.feedback and ctx.feedback.on_grenade_trail then
+              ctx.feedback.on_grenade_trail(g.pos.x, g.pos.y)
+            end
+          end
           i = i + 1
         end
       end

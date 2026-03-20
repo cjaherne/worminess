@@ -14,6 +14,7 @@ function M.apply(ctx, wx, wy, weapon_def, owner_team)
   local dmax = weapon_def.damage_max
   local kb = weapon_def.knockback or 0
   local all = roster.all_moles(teams)
+  local any_hurt = false
   for i = 1, #all do
     local m = all[i]
     if m.alive then
@@ -22,7 +23,11 @@ function M.apply(ctx, wx, wy, weapon_def, owner_team)
         local t = 1 - (d / (br + m.radius))
         t = math.max(0, math.min(1, t))
         local dmg = dmax * t
+        local hp0 = m.hp
         mole_ent.damage(m, dmg, ff, owner_team)
+        if hp0 > m.hp then
+          any_hurt = true
+        end
         if m.alive then
           local dir = vec2.norm({ x = m.x - wx, y = m.y - wy })
           if dir.x == 0 and dir.y == 0 then
@@ -32,6 +37,9 @@ function M.apply(ctx, wx, wy, weapon_def, owner_team)
         end
       end
     end
+  end
+  if any_hurt and ctx.feedback and ctx.feedback.on_moles_damaged then
+    ctx.feedback.on_moles_damaged()
   end
   if ctx.feedback and ctx.feedback.on_explosion then
     ctx.feedback.on_explosion(wx, wy, weapon_def)

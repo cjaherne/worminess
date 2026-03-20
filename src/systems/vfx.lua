@@ -54,6 +54,21 @@ function M:add_muzzle(wx, wy, ang)
   end
 end
 
+function M:add_grenade_smoke(x, y)
+  for _ = 1, 2 do
+    self.puffs[#self.puffs + 1] = {
+      x = x + love.math.random(-4, 4),
+      y = y + love.math.random(-4, 4),
+      vx = love.math.random(-35, 35),
+      vy = love.math.random(-70, -18),
+      t = 0,
+      life = 0.38,
+      r = love.math.random(3, 7),
+      c = { 0.58, 0.54, 0.52 },
+    }
+  end
+end
+
 function M:add_rocket_trail(x, y)
   self.puffs[#self.puffs + 1] = {
     x = x + love.math.random(-2, 2),

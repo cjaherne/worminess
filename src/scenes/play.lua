@@ -64,6 +64,9 @@ local function new(match_cfg)
     devices.refresh_joysticks()
     self.ctx.session.last_match_config = match_config_mod.copy(self.cfg)
     self.feedback = {
+      on_moles_damaged = function(is_fall)
+        sfx.play("hurt", is_fall and 0.22 or 0.38)
+      end,
       on_explosion = function(wx, wy, def)
         self.vfx:add_explosion(wx, wy, def.blast_radius, { heavy = false })
         sfx.play_explosion(0.72)
@@ -78,6 +81,9 @@ local function new(match_cfg)
       end,
       on_rocket_trail = function(x, y)
         self.vfx:add_rocket_trail(x, y)
+      end,
+      on_grenade_trail = function(x, y)
+        self.vfx:add_grenade_smoke(x, y)
       end,
     }
     self:start_match()

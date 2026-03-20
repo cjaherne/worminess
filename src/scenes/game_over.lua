@@ -1,6 +1,7 @@
 --- round_end or match_end panel on top of play.
 local theme = require("ui.theme")
 local layout = require("ui.layout")
+local sfx = require("audio.sfx")
 
 local function spawn_confetti()
   local parts = {}
@@ -84,15 +85,21 @@ local function new(opts)
       self:confirm()
     elseif key == "escape" and self.variant == "round_end" then
       if self.on_continue then
+        sfx.play("ui", 0.35)
         self.on_continue()
       end
     end
   end
 
   function self:gamepadpressed(_, button)
-    if button == "a" then
+    if button == "dpup" then
+      self:keypressed("up")
+    elseif button == "dpdown" then
+      self:keypressed("down")
+    elseif button == "a" then
       self:confirm()
     elseif button == "b" and self.variant == "round_end" and self.on_continue then
+      sfx.play("ui", 0.35)
       self.on_continue()
     end
   end
@@ -115,6 +122,7 @@ local function new(opts)
   end
 
   function self:confirm()
+    sfx.play("ui", 0.42)
     if self.variant == "round_end" then
       if self.on_continue then
         self.on_continue()
@@ -168,8 +176,10 @@ local function new(opts)
         1.2,
         1.2
       )
-      love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.85)
+      local pulse = 0.65 + 0.35 * math.sin(love.timer.getTime() * 2 * math.pi * 0.85)
+      love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.55 + 0.35 * pulse)
       love.graphics.printf("Continue → next round (new terrain)", 340, 290, 600, "center", 0, 0.95, 0.95)
+      love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.85)
       local sel = (self.focus == 1)
       if sel then
         love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], 0.35)
@@ -177,6 +187,8 @@ local function new(opts)
       end
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
       love.graphics.printf("Continue", 400, 366, 480, "center", 0, 1.05, 1.05)
+      love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
+      love.graphics.printf("A / Enter · B · D-pad", 340, 418, 600, "center", 0, 0.72, 0.72)
     else
       love.graphics.printf("Match finished", 340, 170, 600, "center", 0, 1.45, 1.45)
       love.graphics.setColor(c.team_a[1], c.team_a[2], c.team_a[3], 1)
@@ -227,6 +239,8 @@ local function new(opts)
         love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
         love.graphics.printf(labels[i], bx, yy + 10, bw, "center", 0, 1, 1)
       end
+      love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
+      love.graphics.printf("D-pad · Enter · Click", 340, 500, 600, "center", 0, 0.72, 0.72)
     end
   end
 

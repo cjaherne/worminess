@@ -1,6 +1,7 @@
 --- Overlay: simulation frozen while not top of stack is irrelevant — only pause updates.
 local theme = require("ui.theme")
 local layout = require("ui.layout")
+local sfx = require("audio.sfx")
 
 local ITEM_RESUME = 1
 local ITEM_RESTART = 2
@@ -74,6 +75,11 @@ local function new(play_scene)
   function self:confirm()
     if self.focus == ITEM_RESUME then
       self:resume()
+    else
+      sfx.play("ui", 0.38)
+    end
+    if self.focus == ITEM_RESUME then
+      return
     elseif self.focus == ITEM_RESTART then
       self.ctx.scenes:pop()
       self.play:restart_match()
