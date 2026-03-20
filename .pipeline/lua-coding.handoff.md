@@ -2,12 +2,11 @@
 
 ## Summary
 
-Reading DESIGN.md, REQUIREMENTS.md, and scanning the codebase for `config.defaults` references.
+Verifying the workspace matches the design after upstream changes; reading DESIGN.md and checking config files.
 
 
 
 
-Creating `src/config/defaults.lua`, removing the old file, and updating references. Reading `TESTING.md`, `ASSETS.md`, and `CODING_NOTES.md`.
 
 
 
@@ -22,111 +21,46 @@ Creating `src/config/defaults.lua`, removing the old file, and updating referenc
 
 
 
-Creating the nested module path, updating the spec helper and release check, and documenting REQUIREMENTS.md traceability in CODING_NOTES.md.
 
+Confirming the repo matches DESIGN §2: nested `src/config/defaults.lua`, release check, and spec helper are correct. Fixing a stale entry in `.pipeline/lua-coding.handoff.md` that incorrectly lists `src/config.defaults.lua`.
 
 
 
-Checking `path_join`: it only accepts three arguments; calls with four segments are incorrect.
 
 
 
 
-Fixing `path_join` usage: it accepts only three parameters, so four-argument calls dropped `defaults.lua`.
 
 
+## Status
 
+The **pipeline slice is already implemented** and matches **DESIGN.md §2** and the **Original task**.
 
+### What’s in place
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Here is what was wrong, what changed, and how it was checked.
-
-### Cause (R1)
-
-With `love.filesystem.setRequirePath("src/?.lua;…")`, `require("config.defaults")` resolves to **`src/config/defaults.lua`** (dots → path segments). A single file **`src/config.defaults.lua`** never matched that pattern, so the module looked “missing” even though the table existed.
-
-### Fix (R2)
-
-- **Added** `src/config/defaults.lua` (same `return { … }` as before).
-- **Removed** `src/config.defaults.lua`.
-- **`spec/spec_helper.lua`**: repo-root detection, `package.preload["config.defaults"]` `loadfile` target, and comments now use `src/config/defaults.lua`. `path_join` only takes three parameters, so paths are built as `path_join(path_join(root, "src", "config"), "defaults.lua")` (four-part paths were wrong before and would have truncated to `…/config` without `defaults.lua`).
-- **`tools/release-check.mjs`**: `src/config/defaults.lua` is in the `required` list so `npm run build` fails if it is missing.
-- **`TESTING.md`**, **`ASSETS.md`**: paths/wording updated.
-- **`CODING_NOTES.md`**: table for **REQUIREMENTS.md R1–R3** with traceability and R3 verification notes.
-- **`.pipeline/game-art.handoff.md`** and **`.pipeline/context-cache.json`**: file map entry updated for consistency.
-
-`require("config.defaults")` at call sites is unchanged, as in the design.
+| Item | State |
+|------|--------|
+| **`src/config/defaults.lua`** | Present; `require("config.defaults")` resolves via `src/?.lua` (dots → `config/defaults.lua`). |
+| **Flat `src/config.defaults.lua`** | Absent (as required). |
+| **`tools/release-check.mjs`** | Includes `src/config/defaults.lua` in `required`. |
+| **`spec/spec_helper.lua`** | Probes and preloads `src/config/defaults.lua` with correct `path_join` nesting. |
+| **`CODING_NOTES.md`** | **REQUIREMENTS.md R1–R3** table documents cause, fix, and verification. |
+| **`main.lua`** | Still has `love.load` / `love.update` / `love.draw` and the require path from the design. |
 
 ### Verification (R3)
 
-- **`npm run build`** — succeeds (`release check ok`).
-- **Busted / `lua` on PATH** — not available here; **`CODING_NOTES.md`** records that. **`love.exe`** is at `C:\Program Files\LOVE\love.exe` for a local `love .` smoke test.
+- **`npm run build`** — completed successfully (`release check ok`).
 
-Other `.pipeline/*.md` files still mention the old filename in historical snippets; the design called those optional and they are not required for the game or `npm run build`.
+### Change made this turn
+
+- **`.pipeline/lua-coding.handoff.md`** — “Files Created/Modified” wrongly listed `src/config.defaults.lua`; it now correctly lists **`src/config/defaults.lua`** and notes the flat file was removed.
+
+No new **`CODING_NOTES.md`** sections were needed: there are no extra deviations, design issues, or suggestions beyond what’s already documented for R1–R3 and the product slice. Older `.pipeline/*.md` files may still mention the legacy path in historical snippets; **DESIGN.md** treats those as non-blocking.
+
+**REQUIREMENTS.md:** R1–R3 are satisfied and mapped in **`CODING_NOTES.md`** under **“REQUIREMENTS.md — pipeline slice (R1–R3, `config.defaults`)”**.
 
 ## Files Created/Modified
-- ASSETS.md
-- CODING_NOTES.md
-- TESTING.md
-- spec/spec_helper.lua
-- src/config.defaults.lua
-- tools/release-check.mjs
+- (none)
 
 ## Shell Commands Run
-- `cd "C:\Users\Chris\Documents\GitHub\worminess" && npm run build`
-- `where lua 2>nul; where busted 2>nul; where love 2>nul`
 - `Set-Location "C:\Users\Chris\Documents\GitHub\worminess"; npm run build`
-- `Get-Command lua, busted, love -ErrorAction SilentlyContinue | Format-Table Name, Source -AutoSize`
-- `cmd /c "where lua 2>nul"`
