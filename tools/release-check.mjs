@@ -11,6 +11,7 @@ const root = path.join(__dirname, "..");
 const required = [
   "main.lua",
   "conf.lua",
+  "src/config/defaults.lua",
   "src/app.lua",
   "src/scenes/play.lua",
   "src/sim/world.lua",

@@ -2,17 +2,7 @@
 
 ## Summary
 
-Reading design docs, handoffs, and code that references assets to align the art pass. Checking whether `generate_sprite` is available.
-
-
-
-
-Checking how assets are loaded so ASSETS.md matches the implementation. `generate_sprite` isn't available in this session.
-
-
-
-
-Confirming `generate_sprite` isn't in our tool set. Updating `ASSETS.md` to align with shipped code (`app.lua` paths, `mole_draw.lua` / `hud.lua` scales) and refreshing the game-art handoff.
+Running the game-art pass: reading design docs, handoffs, and the asset manifest, then checking for the `generate_sprite` MCP tool.
 
 
 
@@ -22,32 +12,37 @@ Confirming `generate_sprite` isn't in our tool set. Updating `ASSETS.md` to alig
 
 
 
-Here’s the status of this **game-art** pass.
 
-## Read / verified
 
-- **`DESIGN.md`** (including shipped **`assetStructure`** and references to **`ASSETS.md`** / `mole_draw` / `hud`).
-- **`REQUIREMENTS.md`** (R1–R11).
-- **`.pipeline/game-art.handoff.md`** and **`lua-coding.handoff.md`** for what’s implemented.
-- **`src/app.lua`** image paths and keys, **`src/render/mole_draw.lua`** scales, **`src/ui/hud.lua`** icon/wind draw.
 
-## `generate_sprite` MCP
 
-This environment still **does not expose** a `generate_sprite` tool, so **DALL·E 3 could not be called** and **no new PNGs** were produced. Existing sprites under **`assets/sprites/`** are unchanged (still from **`tools/gen_sprites.mjs`** unless you replace them locally).
 
-## What changed
+Confirming `generate_sprite` isn't in our available tools — we can't invoke DALL·E. Refreshing `ASSETS.md` to match the merged DESIGN (§7, §9) and palette from `src/config/defaults.lua`, and replacing the bloated `.pipeline/game-art.handoff.md` with a concise handoff.
 
-1. **`ASSETS.md`** — Reworked manifest:
-   - Explicit **~1024 px / DALL·E-style** scaling note and **opaque vs alpha** warning for future MCP art.
-   - **MCP unavailable** + **`gen_sprites.mjs`** regeneration note.
-   - Table columns: **path → `app.assets` key → use → suggested scale → shipped scale** (from **`mole_draw.lua`** / **`hud.lua`**).
-   - Mole **origin** (feet at `m.x, m.y`) called out.
 
-2. **`.pipeline/game-art.handoff.md`** — Short, clean handoff for this run (no long transcript).
 
-No edits to **`main.lua`**, **`conf.lua`**, or other gameplay Lua.
 
-When **`generate_sprite`** is wired in Cursor, re-run it for each **`assets/sprites/*.png`** path with consistent **pixel-art, limited-palette** prompts, then adjust **`SPR_SCALE` / HUD `0.42`** if the new silhouettes read differently.
+## What happened
+
+**`generate_sprite` is still not available** in this session (it isn’t in the agent’s tool list), so **DALL·E was not run** and **`assets/sprites/*.png` were not regenerated**. Everything under `assets/sprites/` is unchanged.
+
+## What was updated
+
+1. **`ASSETS.md`**
+   - States clearly that textures are **1024×1022** class (same idea as typical DALL·E square output) and must be **scaled with `love.graphics.draw(..., sx, sy, ...)`**.
+   - Adds a **palette cues** table from **`src/config/defaults.lua`** (`team1` / `team2` RGB) for future MCP prompts, plus pointers to **DESIGN.md** §7 / §9.
+   - Keeps the full **path → `app.assets` key → use → suggested vs implemented scale** table (aligned with **`src/app.lua`**, **`mole_draw.lua`**, **`hud.lua`**).
+   - Documents MCP absence, **`gen_sprites.mjs`** fallback, and the **opaque DALL·E** / alpha caveat.
+
+2. **`.pipeline/game-art.handoff.md`**
+   - Replaced the long transcript-style content with a **short** handoff: no MCP, no new art, **`ASSETS.md`** as the coder-facing manifest.
+
+## Reads performed
+
+- **DESIGN.md** — merged architecture; **`src/config/defaults.lua`**; **`assets/sprites/*.png`** in §9; HUD/polish in §7.
+- **REQUIREMENTS.md** — R1–R3 are **`config.defaults`** meta; art expectations stay cross-linked to **CODING_NOTES** / **DESIGN** §7 in **`ASSETS.md`**.
+
+When **`generate_sprite`** is enabled in your Cursor MCP config, the same **repo-relative** paths (e.g. `assets/sprites/mole_team_a_idle.png`, …) are the ones to target, using the palette section in **`ASSETS.md`** for consistent prompts.
 
 ## Files Created/Modified
 - ASSETS.md

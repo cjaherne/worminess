@@ -2,7 +2,7 @@
 
 ## Automated unit tests (Busted)
 
-Pure Lua modules are covered with **[busted](https://lunarmodules.github.io/busted/)** specs under `spec/`. The helper `spec/spec_helper.lua` mirrors LÖVE’s `src/` require layout and registers `package.preload["config.defaults"]` so stock Lua resolves `src/config.defaults.lua` (Lua’s loader maps `config.defaults` to `config/defaults.lua` by default).
+Pure Lua modules are covered with **[busted](https://lunarmodules.github.io/busted/)** specs under `spec/`. The helper `spec/spec_helper.lua` mirrors LÖVE’s `src/` require layout (including `src/config/defaults.lua` for `require("config.defaults")`) and registers `package.preload["config.defaults"]` so CLI Lua loads the same file as LÖVE regardless of cwd edge cases.
 
 **Config:** `.busted` sets `helper` and disables **`auto-insulate`** so each spec file shares the same `package.*` (otherwise the helper’s loaders would not apply to insulated files).
 
@@ -43,5 +43,7 @@ Confirm the window opens without Lua errors. **Movement (manual):** start a matc
 `src/data/session_scores.lua` keeps wins/draws **in memory** for the process; there is **no** `love.filesystem` persistence (matches “since launching” / session-only wording). No disk smoke test applies unless persistence is added later.
 
 ## Coverage gaps
+
+`config.defaults` schema and load path are covered by `spec/config_defaults_spec.lua` (via the same `spec_helper` preload LÖVE uses at `src/config/defaults.lua`).
 
 Not covered by busted here: `app.lua`, scenes, input routing, rendering, audio, full `world.lua` integration, weapon projectiles end-to-end, and LÖVE-specific APIs. Add focused specs or integration smoke as those layers gain test seams.

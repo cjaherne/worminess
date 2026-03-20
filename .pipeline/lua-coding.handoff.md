@@ -2,7 +2,7 @@
 
 ## Summary
 
-Implementing sub-task 3: reading the design and current HUD, input, match setup, and rendering code to identify gaps and polish.
+Verifying the workspace matches the design after upstream changes; reading DESIGN.md and checking config files.
 
 
 
@@ -22,7 +22,7 @@ Implementing sub-task 3: reading the design and current HUD, input, match setup,
 
 
 
-Sub-task 3 is largely implemented. Adding a center HUD panel for team vitality (aggregate HP and living counts), a friendly-fire indicator, and wiring the weapon UI to `sim.weapons.registry` for consistency with `world.lua`.
+Confirming the repo matches DESIGN §2: nested `src/config/defaults.lua`, release check, and spec helper are correct. Fixing a stale entry in `.pipeline/lua-coding.handoff.md` that incorrectly lists `src/config.defaults.lua`.
 
 
 
@@ -32,45 +32,35 @@ Sub-task 3 is largely implemented. Adding a center HUD panel for team vitality (
 
 
 
+## Status
 
+The **pipeline slice is already implemented** and matches **DESIGN.md §2** and the **Original task**.
 
+### What’s in place
 
+| Item | State |
+|------|--------|
+| **`src/config/defaults.lua`** | Present; `require("config.defaults")` resolves via `src/?.lua` (dots → `config/defaults.lua`). |
+| **Flat `src/config.defaults.lua`** | Absent (as required). |
+| **`tools/release-check.mjs`** | Includes `src/config/defaults.lua` in `required`. |
+| **`spec/spec_helper.lua`** | Probes and preloads `src/config/defaults.lua` with correct `path_join` nesting. |
+| **`CODING_NOTES.md`** | **REQUIREMENTS.md R1–R3** table documents cause, fix, and verification. |
+| **`main.lua`** | Still has `love.load` / `love.update` / `love.draw` and the require path from the design. |
 
+### Verification (R3)
 
-## Sub-task 3 status
+- **`npm run build`** — completed successfully (`release check ok`).
 
-The game already met most of sub-task 3 (HUD, projectile/mole polish, shared KB+M, dual gamepads, mole health and other match options in **Match setup**). This pass **extends** that work and tightens consistency.
+### Change made this turn
 
-### What I added or changed
+- **`.pipeline/lua-coding.handoff.md`** — “Files Created/Modified” wrongly listed `src/config.defaults.lua`; it now correctly lists **`src/config/defaults.lua`** and notes the flat file was removed.
 
-1. **`src/ui/hud.lua` — `draw_match_vitals`**
-   - Center column between weapon and wind: **Team A / Team B** with **aggregate HP bar**, **current HP vs full roster cap**, **living count**, the active **input mode** string, and **Friendly fire ON** when `friendly_fire` is enabled.
-   - Weapon panel now uses **`sim.weapons.registry`** (`W.rocket` / `W.grenade`) instead of raw `1` / `2`.
+No new **`CODING_NOTES.md`** sections were needed: there are no extra deviations, design issues, or suggestions beyond what’s already documented for R1–R3 and the product slice. Older `.pipeline/*.md` files may still mention the legacy path in historical snippets; **DESIGN.md** treats those as non-blocking.
 
-2. **`src/scenes/play.lua`**
-   - Calls **`hud.draw_match_vitals`** during play so session-style scoring (top right) and **team-level health** (center) are both visible.
-
-3. **`src/render/mole_draw.lua`**
-   - Aim preview length/color uses the same **registry** as the sim/HUD.
-
-4. **`CODING_NOTES.md`** — Sub-task 3 section updated to describe the vitality panel, registry alignment, and match-setup coverage (R7/R9/R10/R11).
-
-5. **`README.md`** — HUD section updated for the center panel and help strip.
-
-### Verification
-
-- **`love .`** smoke run: OK.
-- **Lint:** no issues on edited files.
-- **R1–R11:** Still mapped in `CODING_NOTES.md`; R9 (mole health, etc.) remains in **`match_setup`** + **`match_settings`**; R10/R11 remain in **`input_manager`** + **`keyboard_mouse`** / **`gamepad`** + setup **Input** row.
-
-If you want the next iteration, a natural follow-up is a **numeric map-seed editor** on the seed row for gamepad-only users (called out in `CODING_NOTES` as keyboard-only today).
+**REQUIREMENTS.md:** R1–R3 are satisfied and mapped in **`CODING_NOTES.md`** under **“REQUIREMENTS.md — pipeline slice (R1–R3, `config.defaults`)”**.
 
 ## Files Created/Modified
-- CODING_NOTES.md
-- README.md
-- src/render/mole_draw.lua
-- src/scenes/play.lua
-- src/ui/hud.lua
+- (none)
 
 ## Shell Commands Run
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; $p = Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -PassThru -NoNewWindow; Start-Sleep -Seconds 2; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }`
+- `Set-Location "C:\Users\Chris\Documents\GitHub\worminess"; npm run build`
