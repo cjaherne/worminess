@@ -44,4 +44,6 @@ Confirm the window opens without Lua errors. **Movement (manual):** start a matc
 
 ## Coverage gaps
 
+`config.defaults` schema and load path are covered by `spec/config_defaults_spec.lua` (via the same `spec_helper` preload LÖVE uses at `src/config/defaults.lua`).
+
 Not covered by busted here: `app.lua`, scenes, input routing, rendering, audio, full `world.lua` integration, weapon projectiles end-to-end, and LÖVE-specific APIs. Add focused specs or integration smoke as those layers gain test seams.
