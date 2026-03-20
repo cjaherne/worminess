@@ -7,6 +7,18 @@ return {
   jump_speed = 320,
   walk_speed = 140,
   max_dt = 1 / 30,
+  weapon = {
+    rocket_speed = 920,
+    rocket_radius = 3,
+    rocket_blast = 52,
+    rocket_damage = 58,
+    grenade_speed_mul = 1.15,
+    grenade_fuse = 4.0,
+    grenade_blast = 60,
+    grenade_damage = 52,
+    grenade_bounce = 0.55,
+  },
+  wind_force = { low = 28, med = 55, high = 95 },
   colors = {
     team1 = { 0.35, 0.75, 0.95 },
     team2 = { 0.95, 0.45, 0.35 },
