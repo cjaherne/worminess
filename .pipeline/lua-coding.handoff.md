@@ -2,7 +2,7 @@
 
 ## Summary
 
-Implementing sub-task 2: gameplay mechanics, mapgen integration, input, systems, and UI (match setup + HUD). Reading the codebase and DESIGN.md to build on existing code.
+Implementing sub-task 3 polish: reading the codebase and DESIGN.md, then adding audio, VFX, input refinements, and gameplay edge-case fixes.
 
 
 
@@ -12,6 +12,7 @@ Implementing sub-task 2: gameplay mechanics, mapgen integration, input, systems,
 
 
 
+Implementing procedural audio, a VFX system (explosions, trails, match-end celebration), input smoothing and gamepad triggers, gameplay edge-case fixes, and wiring feedback hooks.
 
 
 
@@ -22,11 +23,11 @@ Implementing sub-task 2: gameplay mechanics, mapgen integration, input, systems,
 
 
 
-Implementing gameplay systems, input, map seeding, match setup, full play scene with rounds/mapgen, HUD, pause, and game_over. Working incrementally.
 
 
 
 
+Updating `play.lua` to integrate VFX, SFX, stick smoothing, triggers, elimination handling, and refactored endgame flow.
 
 
 
@@ -41,6 +42,7 @@ Implementing gameplay systems, input, map seeding, match setup, full play scene 
 
 
 
+Removing frozen celebration from `play` (won't update under overlay) and adding confetti to `game_over` for `match_end`.
 
 
 
@@ -82,7 +84,6 @@ Implementing gameplay systems, input, map seeding, match setup, full play scene 
 
 
 
-Removing the unused require from `play_hud.lua` and implementing `match_setup`, `play`, `pause`, and `game_over`.
 
 
 
@@ -91,133 +92,56 @@ Removing the unused require from `play_hud.lua` and implementing `match_setup`, 
 
 
 
+Here’s what sub-task **3 of 3** added and how it ties together.
 
-Writing `match_setup.lua` and the full `play.lua`.
+### Audio (`src/audio/sfx.lua`)
+- Procedural **`SoundData`** built once in **`love.load`** via `require("audio.sfx").init()` in ```17:24:src/app.lua```.
+- Cues: **fire** sweep, **grenade_pop**, **explosion** (noise + low **thump**), **hurt** (unused for now), **ui** blip.
+- Wired from **`ctx.feedback`** in explosions/weapons, menu/match flow, and reassigned active mole.
 
-
-
-
-Implementing the full `play.lua`.
-
-
-
-
-Fixing `play.lua` update logic (remove duplicate projectile updates), fixing `turn_resolver` duplicate phase set, moving `mole` require to the top, calling `theme.load_fonts` from `app`, wiring `main_menu` → `match_setup`, and adding joystick hot-plug handlers.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Here’s what was implemented for **sub-task 2**: full combat loop, per-round proc mapgen, match setup + HUD, input modes, and overlays.
-
-### Gameplay & world
-- **`src/game/map_seed.lua`** — `derive(procedural_seed, round_index)` per DESIGN (random vs deterministic sequence).
-- **`src/systems/world_update.lua`** — Mole gravity/slide vs terrain, fall damage, rocket substeps + terrain hits, grenade physics via `entities.grenade.update`.
-- **`src/systems/weapons.lua`** — Fire rocket/grenade from the active mole (`turn_state.active_mole`), wind from `MatchConfig`, fuse from `grenade_fuse_seconds`.
-- **`src/systems/explosions.lua`** — Single carve + radial damage/knockback, respects **`friendly_fire`** via `mole.damage`.
-- **`src/systems/turn_resolver.lua`** — When nothing is flying: **round win** (living count) or **advance turn** with `team_turn_slot` + `roster.next_order_slot_after_mole`.
-- **`src/game/roster.lua`** — `next_order_slot_after_mole`, `place_team_from_spawns` (full heal + position each round).
-- **`src/game/match_config.lua`** — `copy()` for snapshots / rematch.
-- **`src/game/turn_state.lua`** — `active_mole`, interstitial timing helpers.
-- **`src/entities/mole.lua`** — `apply_impulse`, `draw` (team colour + mole index label).
-
-### Input
-- **`src/input/bindings.lua`** — P1/P2 shared KB sets (Worms-style).
-- **`src/input/devices.lua`** — `shared_kb` vs `dual_gamepad`, P1 auto-pick first pad, P2 **A to assign**, hot-plug refresh.
-- **`src/input/input_state.lua`** — Stub for future edge tracking.
-
-### UI & scenes
-- **`src/ui/theme.lua`** — `load_fonts()` (22px body, 28px HUD scores).
-- **`src/ui/layout.lua`** — `screen_to_logical` for clicks.
-- **`src/ui/hud/play_hud.lua`** — Turn banner, **round wins vs session match wins**, wind, move/power bars, weapon strip, fuse line, hints, interstitial toast area.
-- **`src/ui/focus_stack.lua`** — Small stack helper for later menus.
-- **`src/scenes/match_setup.lua`** — All **MatchConfig** fields, Tab/arrow editing, **1 / 2** (and pad **X/Y**) for Ready, dual-controller status, validate → **`play.new(cfg)`**, `session.last_match_config` updated.
-- **`src/scenes/play.lua`** — Owns match: **mapgen every round**, mole rotation + `starting_player = ((round_index-1)%2)+1`, aim/move/power, mouse aim in **`shared_kb`**, pad aim/charge/fire in **`dual_gamepad`**, pause (**Esc** / **Start**), stack **`pause`** / **`game_over`**.
-- **`src/scenes/pause.lua`**, **`src/scenes/game_over.lua`** — UX flow: resume / restart / setup / menu; round vs match end; **Rematch** uses `session.last_match_config`; **`session:bump_match_win`** only on **match** end.
-
-### Wiring
-- **`src/scenes/main_menu.lua`** — **Local match** → **`match_setup`** (no direct play).
-- **`src/app.lua`** — `theme.load_fonts()` in `love.load`; **`joystickadded` / `joystickremoved`** refresh devices.
+### VFX (`src/systems/vfx.lua` + `play` draw)
+- **Explosions:** expanding rings, gravity sparks, screen **shake**.
+- **Weapons:** muzzle puffs on fire; **rocket trails** from ```59:62:src/systems/world_update.lua```.
+- **Projectiles / grenades:** clearer layered draw (glow, core, fuse ring on grenades) in ```play.lua```.
+- **Match end:** confetti runs on the **`game_over`** overlay (`match_end` only) with **`self:update`** so it animates while the stack top is `game_over` — see ```19:47:src/scenes/game_over.lua```.
+
+### Input (`src/input/stick.lua` + `play.lua`)
+- **Dual gamepad:** smoothed **left-stick** aim (`stick.smooth2`), **LB/RB** or **analog triggers** (`stick.read_triggers`) for charging; release when triggers &lt; ~0.1 and shoulders up.
+- **Start → pause** stays **before** the active-player gate so **any** pad can pause (```368:375:src/scenes/play.lua```).
+- **Nil slot:** non-assigned pads don’t fire weapons in dual mode (`slot == nil` guard).
+
+### Gameplay edge cases
+- **`turn_state.repair_active_slot`** (```86:108:src/game/turn_state.lua```): if the **active mole dies in aim** (e.g. fall), pick another living mole on that team or treat the team as wiped.
+- **`play:on_round_victory`** centralises round/match overlays, uses **`_endgame_armed`** to avoid double-opens, resets flags in **`begin_round` / `start_match`** and overlay callbacks.
+- **Flying:** if a team hits **0** living mid-flight, projectiles/grenades are cleared and the round ends immediately (no waiting on an empty “flying” resolve).
+
+### Visual polish
+- **Moles:** soft **shadow ellipse** + stacked fill for a bit more depth in ```mole.draw```.
+
+### Session / match config
+- **Rematch** still **`validate` + `copy`** from `session.last_match_config`; **Start match** still validates and stores **`last_match_config`** before **`play.new(c)`**.
+- **`match_setup:resize`** refreshes joysticks after window changes (DESIGN hot-plug note).
 
 ### Docs
-- **`README.md`** — Updated structure and flow.
-- **`CODING_NOTES.md`** — Turn-timer auto-fire, shared vs dual input, toast cadence, tuning notes.
+- **`README.md`**: polish section + layout rows for **`audio/`**, **`vfx`**, **`stick`**.
+- **`CODING_NOTES.md`**: procedural audio, trigger axis variability.
 
-### Original task (sanity)
-| Requirement | Where it’s covered |
-|-------------|-------------------|
-| Worms-like core (aim, power, wind, terrain, explosions, HP, turns, rounds/match) | `play`, systems, `turn_state`, `game_over` |
-| Rocket + grenade | `weapons.lua`, `data/weapons.lua`, entities |
-| 2P local, proc maps each round | `mapgen/init` + `map_seed`, `play:begin_round` |
-| Session **match** wins / matches completed | `session.lua`, HUD + menus |
-| 5 moles, rotation | `constants`, `roster.rotate_order` each round |
-| Starting player alternation | `((round_index-1)%2)+1` |
-| Match variables | `match_setup` + `match_config.validate` |
-| Shared KB+mouse / dual pads | `bindings`, `devices`, `play` routing |
-
-Run locally with **`love .`** from the repo root; fonts and scaling load in **`love.load`** via `theme.load_fonts()`.
+`love .` was started briefly from the project root with no immediate Lua errors. If anything misbehaves on a specific pad, it’s usually trigger axis naming — shoulders remain the reliable charge input (noted in **CODING_NOTES**).
 
 ## Files Created/Modified
 - CODING_NOTES.md
 - README.md
 - src/app.lua
 - src/entities/mole.lua
-- src/game/match_config.lua
-- src/game/roster.lua
 - src/game/turn_state.lua
+- src/scenes/game_over.lua
 - src/scenes/main_menu.lua
+- src/scenes/match_setup.lua
 - src/scenes/play.lua
-- src/ui/theme.lua
+- src/systems/explosions.lua
+- src/systems/weapons.lua
+- src/systems/world_update.lua
+- src/ui/hud/play_hud.lua
 
 ## Shell Commands Run
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; & "C:\Program Files\LOVE\love.exe" --console . 2>&1 | Select-Object -First 40`
-- `Stop-Process -Name love -Force -ErrorAction SilentlyContinue`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -NoNewWindow -PassThru | ForEach-Object { Start-Sleep -Seconds 3; if (-not $_.HasExited) { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue } }`
