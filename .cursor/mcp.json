@@ -6,6 +6,13 @@
         "/workspace"
       ]
     },
+    "github": {
+      "command": "mcp-server-github",
+      "args": [],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
     "fetch": {
       "command": "uvx",
       "args": [
