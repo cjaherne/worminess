@@ -6,24 +6,20 @@
         "/workspace"
       ]
     },
-    "github": {
-      "command": "mcp-server-github",
-      "args": [],
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ]
+    }
+  }
+}B_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
     },
     "fetch": {
       "command": "uvx",
       "args": [
         "mcp-server-fetch"
-      ]
-    },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
       ]
     }
   }
