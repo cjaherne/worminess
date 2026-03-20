@@ -35,13 +35,15 @@ Window **focus**: `love.focus` → `app.focus` mutes `love.audio` when the game 
 - **SFX hooks:** `audio/sfx.lua` + `world` **fire** / **explosion**; **UI blip** on menu confirmations and match actions.
 - **Turn handoff toast (UX §3.6):** **`play`** shows a short **“Next: Player · Mole slot”** banner when turn ownership or active slot changes (not a separate `round_end` scene).
 
-## Sub-task 2 — terrain, combat, two-player (implemented)
+## Sub-task 2 — procedural maps, distinct weapons, 2P turn combat (satisfied)
 
-- **Procedural terrain:** `terrain_gen.lua` uses **smoothed columns**, **domain warp**, extra **ridge** detail, and a mild **left/right bias**; **72** retries for valid spawn plateaus.
-- **Rocket:** **Gravity-scaled trajectory** (`rocket_gravity_mul`) and finer **swept collision** (`rocket_ray_steps`).
-- **Grenade:** **Post-bounce unstick** (`grenade_unstick_px`) to reduce embedding in solid terrain after bounces.
-- **Wind:** Uses **`built.seed_used`** so direction is tied to the map that was actually generated.
-- **Local 2P:** Existing **hotseat + dual bindings + gamepads**; P2 fire widened to **`;` / Enter / RCtrl** per design alternatives.
+| Pipeline ask | Implementation |
+|--------------|------------------|
+| Procedural map **in gameplay** | `terrain_gen.build` from `World.new` (`world.lua`); `map_seed` / random from `match_settings` |
+| **Rocket** vs **grenade** distinct | Rocket: fast segment sweep, mild `rocket_gravity_mul`, impact detonation. Grenade: arc, full `gravity`, **fuse**, bounce + `grenade_unstick_px`. Different blast/damage in `config.defaults.weapon`. |
+| **Two-player turns** + combat | `turn_state.lua` (Designer pseudocode); `play.lua` drives `world:update` + win → `match_end`; damage/knockback `damage.lua`, terrain carve on explosion |
+
+`world.weapon_index` uses **`sim.weapons.registry`** (`rocket` / `grenade` constants) so slots stay aligned with R2/R3 and HUD.
 
 ## Suggestions
 

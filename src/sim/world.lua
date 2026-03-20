@@ -7,6 +7,7 @@ local terrain_gen = require("sim.terrain_gen")
 local TurnState = require("sim.turn_state")
 local rocket_w = require("sim.weapons.rocket")
 local grenade_w = require("sim.weapons.grenade")
+local W = require("sim.weapons.registry")
 local vec2 = require("util.vec2")
 
 local M = {}
@@ -78,7 +79,7 @@ function M.new(settings)
     map_seed_used = built.seed_used,
     aim_angle = -math.pi * 0.4,
     power = 0.72,
-    weapon_index = 1,
+    weapon_index = W.rocket,
     fired_this_turn = false,
     won = false,
     winner = 0,
@@ -181,7 +182,7 @@ function M:try_fire()
   if self.won or self.fired_this_turn or #self.projectiles > 0 then return false end
   local m = self.turn:active_mole(self.moles)
   if not m or not m.alive then return false end
-  if self.weapon_index == 1 then
+  if self.weapon_index == W.rocket then
     rocket_w.spawn(self, m, self.aim_angle, self.power)
   else
     grenade_w.spawn(self, m, self.aim_angle, self.power)
@@ -240,7 +241,7 @@ function M:update(dt, intents, cam_mx, cam_my, use_mouse_aim)
           self.power = math.max(0.35, math.min(1, self.power + intent.power_delta * dt * 0.55))
         end
         if intent.cycle_weapon then
-          self.weapon_index = 3 - self.weapon_index
+          self.weapon_index = (self.weapon_index == W.rocket) and W.grenade or W.rocket
         end
         if intent.fire_pressed then
           self:try_fire()

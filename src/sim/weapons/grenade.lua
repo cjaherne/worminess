@@ -1,3 +1,4 @@
+--- Grenade: arcing shot, full gravity, timed fuse, terrain bounce + unstick (see `world.integrate_projectiles`).
 local defaults = require("config.defaults")
 
 local M = {}

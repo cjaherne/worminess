@@ -6,6 +6,12 @@ Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.
 
 `main.lua` registers LÖVE callbacks and forwards **`love.load`**, **`love.update`**, and **`love.draw`** to **`src/app.lua`**, which runs the active **scene** (menu → setup → play, etc.) at logical **1280×720** with letterboxing. Audio is muted while the window is unfocused (`love.focus`).
 
+## Maps & combat (core loop)
+
+- **Terrain:** Each match builds a new **procedural** heightfield in **`src/sim/terrain_gen.lua`** (seed from setup or random), destructible via explosions in **`src/sim/terrain.lua`** / **`damage.lua`**.
+- **Weapons:** **Rocket** (fast, impact) vs **grenade** (arc, timed fuse, bounce) in **`src/sim/weapons/`**, integrated in **`src/sim/world.lua`**.
+- **Turns:** Two local players alternate; one mole per turn; **end turn** after moving/firing — see **`src/sim/turn_state.lua`**.
+
 ## Run
 
 1. Install [LÖVE 11.4](https://love2d.org/) (or a compatible 11.x build).
