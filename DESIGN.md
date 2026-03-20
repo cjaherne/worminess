@@ -4,6 +4,16 @@ Create a beautifully styled 'moles' clone of the game 'worms' that implements th
 
 ---
 
+
+## Requirements traceability
+
+Numbered requirements extracted from the user task: **[REQUIREMENTS.md](./REQUIREMENTS.md)**. Implementation must satisfy each item or document deferral in **CODING_NOTES.md**.
+
+<!-- requirements-traceability-linked -->
+
+---
+
+
 ## Requirements traceability
 
 Implement every item in **[REQUIREMENTS.md](./REQUIREMENTS.md)** (R1–R11) or document deferral in **[CODING_NOTES.md](./CODING_NOTES.md)**.
