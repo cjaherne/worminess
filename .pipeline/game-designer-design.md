@@ -2,7 +2,7 @@
 
 **Audience:** merge into `DESIGN.md` + Coding Agent blueprint  
 **Framework:** LÖVE **11.4**  
-**Repo baseline:** `REQUIREMENTS.md` (R1–R11); no gameplay source yet — design is greenfield but must stay compatible with parallel LÖVE Architect / UX agents.
+**Repo baseline:** `REQUIREMENTS.md` (R1–R11); entry via `main.lua` → `app`; existing data hooks `src/data/match_settings.lua`, `src/data/session_scores.lua` (session wins — R6). Full merged spec also lives in root `DESIGN.md`.
 
 ---
 
@@ -48,14 +48,18 @@ Traceability: one bullet per distinct requirement from the user task and BigBoss
 
 ### Turn model (players + moles rotation)
 
+**Normative rule:** The **`on_end_turn` / `advance_mole_index` pseudocode block below is authoritative** for turn and mole rotation. Any prose in other pipeline docs (e.g. LÖVE Architect) that implies advancing the **opponent’s** roster when a turn ends, or advancing a roster when a turn **starts**, is **out of date** — implement the pseudocode.
+
+**Product intent — symmetric same-slot progression:** Each human alternates as **turn owner**. Each player’s **roster slot index** (1..5) advances **only when that player ends their own turn**, so after a full **player–player cycle** (P1 acts, then P2 acts), **both** teams have stepped forward one **living** mole in lockstep when no asymmetrical deaths have occurred — i.e. both sides stay on the **same slot number** relative to their rosters (both on “slot 2” for their next respective turns, etc.). Deaths desync indices by skipping dead moles per `advance_mole_index`.
+
 1. **Turn owner**: Exactly one **human player** is active at a time (`PlayerId` 1 or 2).
 2. **Active mole**: The active player controls **one mole** for the entire turn — the **current index** in that player’s roster (1..5).
 3. **End of turn**: Triggered explicitly by player (**“End turn”** action) or optionally by **timeout** if match options include turn timer (recommended as optional match var, default off for first implementation).
-4. **Advance after a side’s turn**: When Player A ends their turn, pass to Player B with **B’s current mole index unchanged** from B’s last turn (B continues controlling the same “slot” until that mole dies — see next bullet).
-5. **Mole rotation (within team)**: When **Player A’s turn begins again** after B has played, advance A’s roster pointer to the **next living mole** in fixed order. If mole `k` is dead, skip to next living. If **no living moles**, that player has already lost (should not occur if win condition checked).
-6. **First turn of match**: Menu or random determines **who goes first**; each team’s mole pointer starts at **mole 1** (first in roster).
+4. **Handoff to opponent**: When the active player ends their turn, **only the ended player’s** roster pointer is advanced (see pseudocode); the opponent’s `mole_index` **does not change** at that moment. Turn ownership passes to the other player.
+5. **Skipping dead moles**: `advance_mole_index` walks the ring 1..5 until a **living** mole is selected or the team is eliminated (win check should run before offering a turn to a dead team).
+6. **First turn of match**: Menu or random determines **who goes first**; each team’s `mole_index` starts at **first living mole** (typically slot 1). **Do not** call `advance_mole_index` before the first turn’s gameplay begins.
 
-*Pseudocode (design intent only):*
+*Pseudocode (normative — design intent, not drop-in code):*
 
 ```
 on_match_start():
@@ -72,7 +76,7 @@ advance_mole_index(p):
   until mole[p][mole_index[p]] is alive OR no living moles remain for p
 ```
 
-**Clarification for Coding Agent:** When the active player **ends their turn**, advance **that player’s** mole roster pointer (skip dead moles). The opponent’s pointer is unchanged. On the **first** turn of the match, do not advance before play — starting indices are each team’s first living mole.
+**Clarification for Coding Agent:** Advance **only** the **player who ended the turn**; switching `turn_player` does **not** by itself advance anyone’s roster. This yields **symmetric same-slot** pacing versus classic “only one team’s worm advances per global step” rulesets — it matches **R8** (“rotating players and moles each round”) as written for this product.
 
 ### Movement & aiming
 
@@ -266,7 +270,8 @@ assets/
 
 ## persistence
 
-- **Session score only** in memory: `wins = { [1]=0, [2]=0 }`.
+- **Session score (R6):** Match wins since app launch — implement via existing module **`src/data/session_scores.lua`** (or successor API); **no disk persistence** required for R6.
+- **Match options:** Tune from **`src/data/match_settings.lua`** / setup UI; align field names with `MatchRules` / architect tables.
 - **Optional later:** `love.filesystem` for settings (volume, key binds) — **out of scope** for R6 unless UX expands.
 
 ---
@@ -296,7 +301,8 @@ assets/
 ## Notes for Coding Agent
 
 - Treat `REQUIREMENTS.md` R1–R11 as **acceptance criteria**; this doc refines **behavior** only.
-- **Player rotation** = strict **alternating turns** between humans; **mole rotation** = **roster index advances** when that player **ends their turn** (skip dead).
+- **Turn/mole rotation:** Follow the **normative pseudocode** in **Turn model**; **symmetric same-slot** progression is intentional. **`turn_state.lua`** (or equivalent) must not advance the inactive player’s roster on turn end.
+- **Player rotation** = strict **alternating turns** between humans; **mole rotation** = **that player’s** roster index advances **once per their own completed turn** (skip dead).
 - **Mouse** in shared mode: **gate** all mouse handlers on `active_player == mouse_bound_player` or “only active turn.”
 - Keep weapon parameters in **data tables** so tuning does not scatter magic numbers.
 - Do not implement **network multiplayer** in this design scope.
