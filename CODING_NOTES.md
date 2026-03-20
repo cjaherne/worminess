@@ -22,12 +22,12 @@
 
 Window **focus**: `love.focus` → `app.focus` mutes `love.audio` when the game loses focus.
 
-## Sub-task 3 — HUD, polish, turn sync (implemented)
+## Sub-task 3 — HUD, polish, input modes, match vars (implemented)
 
-- **HUD:** Turn banner shows **player, team label, active slot, HP, phase line**, and **turn timer** when enabled. **Session scores** use three **chips** (P1 / P2 / draws) plus matches played. **Weapon panel** highlights selected weapon, shows **live grenade fuse** when one is in flight, and clearer power bar. **Wind** panel shows drift direction hint. **Roster** shows **per-slot HP numbers**, thicker **2px-style active highlight** on the current mole, and **“S1…S5”** labels.
-- **Visual polish:** Moles get **drop shadows**, **team-tinted ground ellipse**, **dimmed non-active team** during the other player’s turn, stronger **active ring**. Rockets get **orange trail**, **glow**, and **streak line**; grenades get **fuse arc**, **orbiting spark**, **pulsing outline**, and shadow.
-- **Turn rotation:** `world.update` now calls **`turn:sync_slots_to_living`** after HP/death resolution so if the **active mole dies mid-shot**, the roster pointer **rebinds to a living slot** before input/physics (still follows `turn_state` ring advance on **end turn**).
-- **Match setup:** Read-only row **“5 moles per team (fixed for v1)”** documents R7 for players configuring a match.
+- **HUD:** Turn banner shows **player, team label, active slot, HP, phase line**, and **turn timer** when enabled. **Session scores** use three **chips** (P1 / P2 / draws) plus matches played. **Center “Team vitality”** panel: **aggregate HP bar**, **HP total vs team cap**, **living count** per team, current **input mode** line, and **Friendly fire ON** when enabled (R1/R6/R9/R10/R11 readability). **Weapon panel** uses **`sim.weapons.registry`**; highlights selected weapon; **live grenade fuse** in flight; power bar. **Wind** panel shows drift hint. **Roster** shows **per-slot HP**, **active slot** outline, **S1…S5** labels. **Help strip** summarizes controls per input mode.
+- **Visual polish:** Moles: **shadow**, **team ground ellipse**, **dim non-active team**, **active ring**. Projectiles: rocket **trail/glow/streak**; grenade **fuse ring**, **spark**, **pulse outline**, shadow. Aim preview colors keyed to **rocket vs grenade** via registry.
+- **Turn rotation:** `world.update` calls **`turn:sync_slots_to_living`** after damage so the active slot never sticks on a dead mole mid-turn (`turn_state` still advances roster on **end turn**).
+- **Match setup:** **Mole health** (`mole_max_hp` stepper), **first turn**, **friendly fire**, **turn limit**, **map seed**, **input mode** (`shared_kb` / `dual_gamepad`), **wind**; read-only **5 moles per team** (R7).
 
 ## Overseer drift closure (menus + SFX + turn toast)
 

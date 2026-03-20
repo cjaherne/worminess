@@ -49,7 +49,8 @@ Short **procedural** sounds for weapon fire, explosions, and UI (`src/audio/sfx.
 
 - **Top left:** whose turn it is, team, active mole **slot**, current mole **HP**, phase hint, optional **turn timer**.
 - **Top right:** **session wins** for P1 / P2 and **draws** (since launch), plus total matches finished.
-- **Lower panels:** weapon selection, aim angle, power; wind readout; **roster** with HP bars and numeric HP per slot (active mole outlined).
+- **Lower panels:** weapon selection (rocket / grenade icons), aim angle, power, live **grenade fuse** when one is in flight; **center** “**Team vitality**” — each team’s **total HP** vs roster cap, **living mole count**, current **input mode**, and **Friendly fire ON** when enabled; **wind** readout; bottom **roster** with per-slot HP bars and numbers (active mole outlined).
+- **Help strip:** condensed controls for **shared keyboard + mouse** vs **two gamepads** (matches Match setup → Input).
 - **Turn handoff:** brief **toast** when the active player or mole slot changes after a turn.
 
 ## Project layout

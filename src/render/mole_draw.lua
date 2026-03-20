@@ -1,4 +1,5 @@
 local defaults = require("config.defaults")
+local W = require("sim.weapons.registry")
 
 local M = {}
 
@@ -142,9 +143,9 @@ end
 function M.draw_aim_preview(m, aim_angle, power, weapon_index)
   if not m or not m.alive then return end
   love.graphics.setLineWidth(2)
-  local col = weapon_index == 1 and { 1, 0.55, 0.25, 0.4 } or { 0.35, 0.95, 0.45, 0.4 }
+  local col = weapon_index == W.rocket and { 1, 0.55, 0.25, 0.4 } or { 0.35, 0.95, 0.45, 0.4 }
   love.graphics.setColor(col[1], col[2], col[3], col[4])
-  local len = weapon_index == 1 and 720 or 420
+  local len = weapon_index == W.rocket and 720 or 420
   local step = 14
   local ox = m.x + math.cos(aim_angle) * (m.r + 8)
   local oy = m.y + math.sin(aim_angle) * (m.r + 8)

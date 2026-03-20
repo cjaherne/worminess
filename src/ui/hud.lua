@@ -1,5 +1,6 @@
 local defaults = require("config.defaults")
 local session_scores = require("data.session_scores")
+local W = require("sim.weapons.registry")
 
 local M = {}
 
@@ -106,10 +107,10 @@ function M.draw_weapon_panel(world, fonts, assets)
     end
     love.graphics.draw(img, x, y, 0, 0.42, 0.42)
   end
-  icon(assets.ui_icon_rocket, 40, 128, sel == 1)
-  icon(assets.ui_icon_grenade, 130, 128, sel == 2)
+  icon(assets.ui_icon_rocket, 40, 128, sel == W.rocket)
+  icon(assets.ui_icon_grenade, 130, 128, sel == W.grenade)
   love.graphics.setColor(0.9, 0.92, 0.95, 1)
-  love.graphics.print(sel == 1 and "Rocket (fast, direct)" or "Grenade (arc, timed fuse)", 40, 210)
+  love.graphics.print(sel == W.rocket and "Rocket (fast, direct)" or "Grenade (arc, timed fuse)", 40, 210)
   local deg = world.aim_angle * 180 / math.pi
   love.graphics.print(string.format("Aim %i°", math.floor(deg + 0.5)), 40, 232)
   love.graphics.setColor(0.55, 0.58, 0.65, 1)
@@ -118,7 +119,7 @@ function M.draw_weapon_panel(world, fonts, assets)
   love.graphics.setColor(0.25, 0.82, 0.95, 0.95)
   love.graphics.rectangle("fill", 102, 260, 196 * world.power, 10, 2, 2)
   love.graphics.setColor(1, 1, 1, 1)
-  if sel == 2 then
+  if sel == W.grenade then
     love.graphics.setColor(0.82, 0.9, 0.95, 1)
     love.graphics.print(string.format("Fuse length %.1fs (armed in-air below)", defaults.weapon.grenade_fuse), 40, 186)
   end
@@ -133,6 +134,57 @@ function M.draw_weapon_panel(world, fonts, assets)
       love.graphics.rectangle("fill", 42, 300, 196 * frac, 4, 2, 2)
       break
     end
+  end
+  love.graphics.setColor(1, 1, 1, 1)
+end
+
+--- Center column: per-team total HP, living count, match flags (readability for R1/R6/R9).
+function M.draw_match_vitals(world, fonts, input_mode)
+  local x, y, bw, bh = 360, 114, 560, 200
+  love.graphics.setFont(fonts.small)
+  love.graphics.setColor(0, 0, 0, 0.5)
+  love.graphics.rectangle("fill", x, y, bw, bh, 10, 10)
+  love.graphics.setColor(0.92, 0.93, 0.96, 1)
+  love.graphics.print("Team vitality", x + 16, y + 12)
+
+  local function team_block(px, py, player, label)
+    local team = defaults.colors["team" .. player]
+    local sum_hp, n_alive, cap = 0, 0, 0
+    for _, m in ipairs(world.moles) do
+      if m.player == player then
+        cap = cap + m.max_hp
+        if m.alive then
+          n_alive = n_alive + 1
+          sum_hp = sum_hp + m.hp
+        end
+      end
+    end
+    local frac = (cap > 0) and math.max(0, math.min(1, sum_hp / cap)) or 0
+    love.graphics.setColor(team[1], team[2], team[3], 0.95)
+    love.graphics.circle("fill", px + 12, py + 18, 7)
+    love.graphics.setColor(0.93, 0.94, 0.96, 1)
+    love.graphics.printf(label, px + 28, py + 8, bw - 44, "left")
+    love.graphics.setColor(0, 0, 0, 0.35)
+    love.graphics.rectangle("fill", px + 28, py + 36, bw - 60, 14, 4, 4)
+    love.graphics.setColor(team[1] * 0.55 + 0.2, team[2] * 0.55 + 0.2, team[3] * 0.55 + 0.2, 0.9)
+    love.graphics.rectangle("fill", px + 30, py + 38, (bw - 64) * frac, 10, 2, 2)
+    love.graphics.setColor(0.78, 0.86, 0.94, 1)
+    love.graphics.print(
+      string.format("%i / %i HP · %i alive", math.max(0, math.floor(sum_hp + 0.5)), cap, n_alive),
+      px + 28,
+      py + 58
+    )
+  end
+
+  team_block(x + 8, y + 34, 1, "Team A")
+  team_block(x + 8, y + 102, 2, "Team B")
+
+  love.graphics.setColor(0.72, 0.76, 0.82, 1)
+  local mode_str = (input_mode == "dual_gamepad") and "Input: two gamepads" or "Input: shared keyboard + mouse"
+  love.graphics.print(mode_str, x + 16, y + 168)
+  if world.settings.friendly_fire then
+    love.graphics.setColor(1, 0.55, 0.45, 1)
+    love.graphics.print("Friendly fire ON", x + 300, y + 168)
   end
   love.graphics.setColor(1, 1, 1, 1)
 end
