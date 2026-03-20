@@ -2,7 +2,7 @@
 
 ## Summary
 
-Exploring the codebase to align the LÖVE architecture design with existing structure, then writing `.pipeline/love-architect-design.md`.
+Reviewing the codebase and existing pipeline design to refresh `.pipeline/love-architect-design.md` and consolidate the MatchConfig schema per overseer feedback.
 
 
 
@@ -12,32 +12,37 @@ Exploring the codebase to align the LÖVE architecture design with existing stru
 
 
 
-Greenfield repo (no Lua yet). Writing a LÖVE-focused architecture document that defines module layout, scenes, lifecycle, and procedural map hooks for the moles/Worms-style game.
 
 
 
 
 
-Summary of what was delivered:
+Noting `main.lua` requires `app`, but `src/app.lua` isn't in the repo—documenting that gap. Updating `.pipeline/love-architect-design.md`: align with implemented modules, consolidate `MatchConfig` with `match_config.lua`, and add a DESIGN.md merge note for the stale codebase snapshot.
 
-## Delivered artifact
 
-**Path:** [`.pipeline/love-architect-design.md`](C:\Users\Chris\Documents\GitHub\worminess\.pipeline\love-architect-design.md)
 
-The repo is effectively **greenfield** (`.pipeline/architecture-brief.md` reports no source files), so the doc defines a **full initial** LÖVE 11 / Lua 5.1 layout rather than deltas to existing Lua.
 
-## Contents (architect perspective)
+Here’s what changed in [`.pipeline/love-architect-design.md`](C:\Users\Chris\Documents\GitHub\worminess\.pipeline\love-architect-design.md).
 
-1. **Runtime:** Scene stack (`scene_manager` + `scenes/*`), long-lived **game session** for match config, roster, turn state, terrain/entities, and **session-only win counts**.
-2. **Require direction:** `mapgen` / `core/*` stay free of scenes and `app`; collisions live behind `world/collision.lua` for future swaps.
-3. **File tree:** `main.lua`, `conf.lua`, `src/app.lua`, `src/scenes/` (boot, menus, match setup, play, pause, game over), `src/game/`, `src/world/` + `mapgen/`, `src/entities/`, `src/systems/`, `src/input/`, `src/data/`, `assets/`.
-4. **Data shapes:** `MatchConfig`, `Session`, `Roster`, `TurnState`, terrain API sketch, weapon data tables.
-5. **Lifecycle:** How `love.load` / `love.update` / `love.draw` and input callbacks forward through the scene manager and, in play, through systems (timers → physics → hits → explosions → turn).
-6. **Procedural maps:** Seeded pipeline (heightfield → optional caves → mask → spawns) with deterministic RNG in `core/rng.lua`.
-7. **2P input:** `input/bindings.lua` + `input/devices.lua` for keyboard+mouse vs dual gamepads and routing mouse aim to the configured “mouse” player.
-8. **Handoff:** §8 API sketches, §9 JSON fragment for merge/tooling, §10 concrete notes for the Coding Agent (joystick module, shared explosion path, testable pure modules).
+### Repo snapshot (overseer / DESIGN.md)
 
-No `.lua` or other implementation files were added—only this design markdown, per your pipeline rules.
+- Added **§0** with an up-to-date file list and tech stack, and called out that root [`DESIGN.md`](DESIGN.md) still claims there is no `main.lua` / `src/` — that’s **out of date**.
+- Per pipeline rules I did **not** edit `DESIGN.md`; §0 is written so the orchestrator can paste/replace that paragraph when merging.
+
+### `MatchConfig` consolidation (§3.1)
+
+- **Single schema** aligned with live [`src/game/match_config.lua`](src/game/matchiness/src/game/match_config.lua) **and** the designer “Components” list: `mole_max_hp`, `rounds_to_win`, `wind_strength`, `grenade_fuse_seconds`, `turn_time_limit`, `friendly_fire`, `procedural_seed`, `map_width`, `map_height`, `teams_per_player`, `input_scheme`.
+- Documented how **`validate()`** clamps each field, and where **`friendly_fire`** must be enforced (`systems/explosions.lua`).
+- Clarified **session** (`scores` / match wins) vs **`rounds_to_win`** (per-match target).
+
+### Build-on-current-code
+
+- Marked what **exists** vs what’s **missing**: `main.lua` → `require("app")` but **`src/app.lua` is absent** in the tree — flagged as boot-blocking.
+- Pointed at real modules (`session`, `mapgen/init`, etc.) instead of a greenfield story.
+- File tree is split into **present** + **add** (`app`, `scene_manager`, `scenes/`, `input/`, `systems/`).
+
+No `.lua` or other implementation files were added—only the pipeline markdown design doc.
 
 ## Files Created/Modified
 - .pipeline/love-architect-design.md
+- .pipeline/love-ux-design.md
