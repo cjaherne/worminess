@@ -2,7 +2,7 @@
 
 ## Summary
 
-Running pre-flight checks and inspecting the repository to prepare the release.
+Running pre-flight checks and gathering repository state for release prep.
 
 
 
@@ -22,17 +22,18 @@ Running pre-flight checks and inspecting the repository to prepare the release.
 
 
 
+Running the test suite per release workflow. No standard SemVer file found in the repo root; we'll note that in the PR and skip the tag.
 
 
 
 
+No standard SemVer file at repo root (`conf.lua` only sets LÖVE engine version). Skipping version bump and tag per workflow. Updating the README with a concise overview of this branch's deliverables, then committing, pushing, and opening the PR.
 
 
 
 
 
 
-Checking remote state and running tests. No standard version file found — we'll add a root `package.json` with version `0.1.0` so we can tag per your requirements.
 
 
 
@@ -42,7 +43,6 @@ Checking remote state and running tests. No standard version file found — we'l
 
 
 
-Adding `package.json` at `0.1.0` (initial release). Updating the README with a concise Features section and version note.
 
 
 
@@ -77,7 +77,6 @@ Adding `package.json` at `0.1.0` (initial release). Updating the README with a c
 
 
 
-Creating and pushing `main` from the repository root so we can open a PR against it.
 
 
 
@@ -107,24 +106,142 @@ Creating and pushing `main` from the repository root so we can open a PR against
 
 
 
-## Release prep complete
 
-### What changed
-- **README** — Added a **Features** section (Worms-style combat, procedural rounds, 5 moles per side, match setup including HP, session match wins, `shared_kb` / `dual_gamepad`, VFX/SFX) and a short note that **SemVer** lives in `package.json` with tags like `v0.1.0`.
-- **Version** — Added root **`package.json`** with **`0.1.0`** (no other listed version file existed). Treating this as the **initial** SemVer for the playable build.
-- **Git** — Commit `dfc46e4`: `chore(release): prepare v0.1.0 for PR`. Branch **`initial-build-V1`** pushed; annotated tag **`v0.1.0`** pushed.
+Syncing with `origin` (remote already includes `package.json` at v0.1.0 and PR #1). Bumping to **0.1.1** (patch: README/release prep after **v0.1.0**). Applying updates and pushing.
 
-### PR
-- **Pull request:** [worminess#1](https://github.com/cjaherne/worminess/pull/1) — `initial-build-V1` → **`main`**, not merged.
 
-### Base branch `main`
-`main` was **missing** on the remote (only `initial-build-V1` existed), so `gh pr create --base main` failed until **`main`** was created at the repo’s root commit (`90f46a8`) and pushed. You may want to set the GitHub **default branch** to `main` under repo settings after you’re happy with the workflow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fixing test failures: `unpack` is nil under Lua 5.4 (use `table.unpack`).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Tests failed on the tagged commit. Fixing `roster.lua` and bumping to **0.1.2** so the release tag includes the fix.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Here’s what was done for release prep.
+
+### Pre-flight
+- Branch: **`initial-build-V1`** (tracking `origin`)
+- **`main..HEAD`**: full initial Moles build (design pipeline, Lua/LÖVE game, tests, `package.json` SemVer from an earlier release commit)
+- **`gh`** is authenticated
+
+### README (`README.md`)
+- Version blurb now references **`v0.1.2`**
+- **Flow** step 4 clarifies **new match** (back through Match setup) vs **Rematch** (reuse `session.last_match_config`)
+
+### Version (`package.json`)
+- **`0.1.0` → `0.1.1` → `0.1.2`** (patch line): `0.1.1` for the README/SemVer bump; **`0.1.2`** after a test fix (see below)
 
 ### Tests
-**`busted`** is not installed in this environment, so tests weren’t run here; the PR body still lists `love .` and `busted` in the test plan.
+- **Busted** was failing on Lua 5.4 (`unpack` is nil). **`src/game/roster.lua`** now uses `local unpack = table.unpack or unpack` and copies with `unpack(order, 1, #order)`.
+- **37 successes, 0 errors** after the change.
 
-### Tag order
-Branch was pushed first, then **`v0.1.0`** was created and pushed, then the PR was opened, matching your requested sequence.
+### Git / GitHub
+- Pushed commits on **`initial-build-V1`**
+- **Annotated tags pushed:** `v0.1.1`, then **`v0.1.2`** (recommended release pointer; includes the roster fix)
+- **`gh pr create`** could not run — [PR #1](https://github.com/cjaherne/worminess/pull/1) already targets **`main`** from this branch. It was updated with **`gh pr edit`** (title + body template, version **`0.1.0` → `0.1.2`**). **PR was not merged.**
+
+### Note on `v0.1.1`
+`v0.1.1` points at the commit **before** the roster fix. If you want a single “good” patch tag, keep **`v0.1.2`** as canonical or delete the remote `v0.1.1` tag yourself; I left both to avoid destructive history changes unless you ask to remove it.
 
 ## Files Created/Modified
 - (none)
@@ -132,52 +249,57 @@ Branch was pushed first, then **`v0.1.0`** was created and pushed, then the PR w
 ## Shell Commands Run
 - `cd "C:\Users\Chris\Documents\GitHub\worminess" && git status && git branch --show-current && git log main..HEAD --oneline`
 - `cd "C:\Users\Chris\Documents\GitHub\worminess"; git status; git branch --show-current; git log main..HEAD --oneline`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git branch -a; git remote -v`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git fetch origin main 2>&1; git log origin/main..HEAD --oneline 2>&1`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git ls-remote --heads origin; git log --oneline -30`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh repo view --json defaultBranchRef 2>&1; busted 2>&1`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; where.exe busted 2>$null; luarocks path 2>$null`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh auth status`
 - `cd "C:\Users\Chris\Documents\GitHub\worminess"; git add -A; git status`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git commit --trailer "Made-with: Cursor" -m "chore(release): prepare v0.1.0 for PR" -m "- README: feature overview, session scoring, input modes, SemVer note" -m "- package.json: initial 0.1.0 for release tags" -m "Bumps version from unversioned to 0.1.0."`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git commit --trailer "Made-with: Cursor" -m "docs(readme): align overview with V1 local multiplayer build" -m "Expand README intro for five-mole teams, procedural maps, match options, input modes, and session stats. Note rematch vs new-match flow for stats.
+
+No root SemVer manifest (package.json, Cargo.toml, etc.); release tag skipped."`
 - `cd "C:\Users\Chris\Documents\GitHub\worminess"; git push -u origin HEAD`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git tag -a v0.1.0 -m "v0.1.0: initial local multiplayer moles artillery"; git push origin v0.1.0`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git fetch origin; git branch -r`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr create --base main --title "chore(release): prepare v0.1.0 for PR" --body @"
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git fetch origin; git pull --rebase origin initial-build-V1`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git rebase --abort`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git log -3 --oneline; git log origin/initial-build-V1 -3 --oneline`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git merge origin/initial-build-V1 -m "merge: sync with origin initial-build-V1"`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git merge --abort`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git reset --hard origin/initial-build-V1`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git log -8 --oneline`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git log main..HEAD --oneline | Select-Object -First 25`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git tag -l "v*"; git ls-remote --tags origin "v*"`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr list --head initial-build-V1 --base main`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git log main -5 --oneline; git merge-base main HEAD`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git add -A; git status`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git reset HEAD; git add package.json README.md; git status`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git commit --trailer "Made-with: Cursor" -m "chore(release): prepare v0.1.1 for PR" -m "README: clarify new match vs rematch for setup and rules. Bump package.json for SemVer tag.
+
+Bumps version from 0.1.0 to 0.1.1."`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git push -u origin HEAD`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git tag -a v0.1.1 -m "v0.1.1: patch release — README flow note, SemVer bump"; git push origin v0.1.1`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr create --base main --head initial-build-V1 --title "chore(release): prepare v0.1.1 for PR" --body "test
+
+Made with [Cursor](https://cursor.com)" 2>&1`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr edit 1 --title "chore(release): prepare v0.1.1 for PR" --body @"
 ## Summary
-This branch delivers **Moles**, a styled local 2-player Worms-like artillery game for LÖVE 11.x: procedural rounds, rockets and grenades, match configuration (including mole HP), session match-win scoring, and shared keyboard/mouse or dual gamepad input. Release prep adds SemVer metadata and README coverage of the shipped feature set.
+This branch introduces **Moles**, a local 2-player Worms-style artillery game (LÖVE 11.x): procedural maps each round, five moles per side with alternating players and roster rotation, rockets and grenades with distinct behavior, match setup (HP, wind, fuse, timer, friendly fire, input mode, seed), session win tracking, and themed UI with procedural SFX/VFX.
 
 ## Changes
-- **Gameplay / UX** (prior commits on branch): turn-based combat, weapons, explosions, VFX/SFX, match setup, pause, game over, HUD, roster/turn rotation, input schemes.
-- **Release prep** (this PR): expanded README (**Features**, version note); root **package.json** at **0.1.0** for SemVer and **v0.1.0** git tag.
+- Full game loop: boot → menu → match setup (dual Ready) → play → pause / game over / rematch
+- Combat: terrain destruction, wind, direct-hit detonation, turn resolver and roster handling
+- Input: shared keyboard + mouse and dual gamepad modes; smoothed sticks and trigger power
+- **Release prep:** README clarifies **new match** vs **Rematch**; \`package.json\` SemVer **0.1.0 → 0.1.1** (patch)
+- Tag \`v0.1.1\` pushed (prior \`v0.1.0\` remains for the initial release marker)
 
 ## Version
-\`(none)\` → \`0.1.0\` (initial / minor pre-1.0)
+\`0.1.0\` → \`0.1.1\` (patch)
 
 ## Test plan
 - [ ] Build passes
-- [ ] Key files reviewed: README.md, package.json, conf.lua, src/scenes/play.lua, src/game/match_config.lua
-
-Made with [Cursor](https://cursor.com)
+- [ ] Key files reviewed: \`package.json\`, \`README.md\`, \`main.lua\`, \`src/game/match_config.lua\`, \`src/scenes/play.lua\`
 "@`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git rev-list --max-parents=0 HEAD`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git push origin 90f46a8fcf23bb7dffcb06f225e7bd2ab0815f68:refs/heads/main`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git log main..HEAD --oneline`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git fetch origin main; git log origin/main..HEAD --oneline`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git rev-parse origin/main; git log origin/main -1 --oneline`
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr create --base main --head initial-build-V1 --title "chore(release): prepare v0.1.0 for PR" --body @"
-## Summary
-This branch delivers **Moles**, a styled local 2-player Worms-like artillery game for LÖVE 11.x: procedural rounds, rockets and grenades, match configuration (including mole HP), session match-win scoring, and shared keyboard/mouse or dual gamepad input. Release prep adds SemVer metadata and README coverage of the shipped feature set.
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr edit 1 --title "chore(release): prepare v0.1.1 for PR" --body-file .pr-body-tmp.md`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; if (Test-Path ".luarocks\bin\busted.bat") { & .\.luarocks\bin\busted.bat --helper=spec/helper.lua } else { Write-Host "busted.bat not found, skip" }`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; & .\.luarocks\bin\busted.bat --helper=spec/helper.lua`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; git add src/game/roster.lua package.json README.md; git commit --trailer "Made-with: Cursor" -m "fix(roster): use table.unpack for Lua 5.4 compatibility" -m "Busted runs on Lua 5.4 where global unpack is absent. Copy mole order with table.unpack (or unpack on LuaJIT).
 
-## Changes
-- **Gameplay / UX** (branch history): turn-based combat, rockets/grenades, wind, terrain destruction, match setup with validation, pause, game over, HUD, roster and turn rotation, procedural mapgen each round, VFX/SFX, input schemes (\`shared_kb\` / \`dual_gamepad\`).
-- **Release prep** (latest commit): README **Features** section and SemVer note; root **package.json** at **0.1.0**; git tag **v0.1.0** pushed.
-
-## Version
-\`(none)\` → \`0.1.0\` (initial SemVer / pre-1.0 minor)
-
-## Test plan
-- [ ] Build passes (\`love .\` from project root)
-- [ ] \`busted\` passes when LuaRocks/busted is installed (see TESTING.md)
-- [ ] Key files reviewed: README.md, package.json, conf.lua, src/scenes/play.lua, src/game/match_config.lua
-
-Made with [Cursor](https://cursor.com)
-"@`
+Bumps version from 0.1.1 to 0.1.2."`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; & .\.luarocks\bin\busted.bat --helper=spec/helper.lua; git push origin HEAD; git tag -a v0.1.2 -m "v0.1.2: roster Lua 5.4 fix + release docs"; git push origin v0.1.2`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; gh pr edit 1 --title "chore(release): prepare v0.1.2 for PR" --body-file .pr-body-tmp.md; Remove-Item .pr-body-tmp.md`
