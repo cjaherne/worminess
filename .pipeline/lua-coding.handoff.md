@@ -2,7 +2,7 @@
 
 ## Summary
 
-Auditing polish layers (SFX, VFX, input, HUD, game_over) against DESIGN.md and filling gaps.
+Auditing `love.graphics.printf` usage and `turn_state` phases per the overseer review.
 
 
 
@@ -17,7 +17,6 @@ Auditing polish layers (SFX, VFX, input, HUD, game_over) against DESIGN.md and f
 
 
 
-Implementing polish: wiring hurt SFX for explosion/fall damage, grenade smoke VFX, game_over D-pad navigation + UI SFX, and a subtle ≤1 Hz HUD pulse per accessibility spec.
 
 
 
@@ -33,6 +32,7 @@ Implementing polish: wiring hurt SFX for explosion/fall damage, grenade smoke VF
 
 
 
+Implementing overseer review: adding theme font tiers so body/HUD meet ≥22/≥28px at scale 1.0, normalizing all scaled `printf` calls, and removing the unused `firing` phase.
 
 
 
@@ -82,35 +82,118 @@ Implementing polish: wiring hurt SFX for explosion/fall damage, grenade smoke VF
 
 
 
-Here’s what **sub-task 3 (polish)** added on top of the existing SFX/VFX/input/HUD/game-over work.
 
-### Audio
-- **`hurt`** is now used when moles actually lose HP: **`explosions.apply`** calls **`on_moles_damaged`** once per blast if any mole’s HP dropped; **fall damage** in **`world_update`** calls the same hook with **`true`** for a quieter mix (see ```7:46:src/systems/explosions.lua``` and ```10:25:src/systems/world_update.lua```).
-- **`play.lua`** wires **`on_moles_damaged`** / **`on_grenade_trail`** into **`feedback`** alongside explosion and weapon cues.
 
-### Visual effects
-- **`vfx:add_grenade_smoke`** — grey smoke puffs while grenades are in flight (~every **0.08s**), via **`on_grenade_trail`** in ```108:145:src/systems/world_update.lua``` and ```57:75:src/systems/vfx.lua```.
 
-### UI / accessibility (≤ ~1 Hz pulse)
-- **`play_hud`**: round-start band and hint line use a slow sine on alpha (**0.9 Hz** / **0.75 Hz**) so prompts stay readable and within the design’s pulse cap (```63:69:src/ui/hud/play_hud.lua```, hint block).
-- **`game_over`**: “Continue → next …” uses **0.85 Hz** brightness pulse; **D-pad up/down** moves focus on **`match_end`**; **A / Enter / B / Esc** paths get a light **`ui`** blip where appropriate; footer hints for controls (```93:104:src/scenes/game_over.lua```, draw section).
 
-### Pause
-- **`ui`** SFX on **Restart / Setup / Menu**, not on **Resume**, so closing pause stays quiet (```75:95:src/scenes/pause.lua```).
 
-### Smoke test
-- **`love .`** ran briefly without an immediate exit.
 
-**Original task** (mechanics, 2P, proc maps, session wins, 5 moles, rotation, match vars, KB+gamepad) remains covered by the existing game code; this pass focused on **feedback polish and menu/HUD refinement** for the final pipeline slice.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Overseer typography audit
+
+**Approach:** Dropped all sub-1.0 `love.graphics.printf` scales in the listed UI files by introducing **`theme.font_title`** (56px), **`theme.font_banner`** (34px), raising **`font_body`** to **24px** and **`font_hud`** to **30px**, and picking the right font per block so **menu copy ≥22px** and **primary HUD ≥28px** at **scale 1.0**.
+
+### Files touched
+
+| Area | Change |
+|------|--------|
+| [`src/ui/theme.lua`](src/ui/theme.lua) | `font_body` 24, `font_hud` 30, new `font_title` / `font_banner`. |
+| [`src/scenes/boot.lua`](src/scenes/boot.lua) | Title / subtitle / prompt / footer use tiered fonts, default `printf` scaling. |
+| [`src/scenes/main_menu.lua`](src/scenes/main_menu.lua) | Title → `font_title`; stats → `font_hud`; rest → `font_body`. |
+| [`src/scenes/match_setup.lua`](src/scenes/match_setup.lua) | Banner + body fonts; row spacing **38px**; ready/start/back layout + **mouse hit boxes** aligned with new layout. |
+| [`src/scenes/game_over.lua`](src/scenes/game_over.lua) | Banner / HUD / body fonts; **mouse** hit regions updated for new button Y positions. |
+| [`src/scenes/pause.lua`](src/scenes/pause.lua) | Same pattern for title, session text, menu, footer. |
+| [`src/ui/hud/play_hud.lua`](src/ui/hud/play_hud.lua) | All primary HUD lines on **`font_hud`** at scale 1; **hints** on **`font_body`**; weapon cells **88×72** so **Rocket/Grenade** wrap cleanly at 30px. |
+| [`src/entities/mole.lua`](src/entities/mole.lua) | Mole index uses **`theme.font_body`** instead of **0.65** scale (still ≥22px). |
+| [`src/game/turn_state.lua`](src/game/turn_state.lua) | Removed unused **`firing`** phase (combat already uses **`aim` → `flying`** via `weapons.try_fire`). |
+| [`CODING_NOTES.md`](CODING_NOTES.md) | Short **Suggestions** note on the font-tier policy. |
+
+### Verification
+
+- No remaining **`firing`** references.
+- **`love .`** smoke run completed without an immediate crash.
+- **`main.lua`** still wires **`love.load` / `update` / `draw`** through **`app.register()`** (unchanged).
 
 ## Files Created/Modified
+- CODING_NOTES.md
+- src/entities/mole.lua
+- src/game/turn_state.lua
+- src/scenes/boot.lua
 - src/scenes/game_over.lua
+- src/scenes/main_menu.lua
+- src/scenes/match_setup.lua
 - src/scenes/pause.lua
-- src/scenes/play.lua
-- src/systems/explosions.lua
-- src/systems/vfx.lua
-- src/systems/world_update.lua
 - src/ui/hud/play_hud.lua
+- src/ui/theme.lua
 
 ## Shell Commands Run
 - `cd "C:\Users\Chris\Documents\GitHub\worminess"; if (Test-Path "C:\Program Files\LOVE\love.exe") { $p = Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -PassThru -WindowStyle Hidden; Start-Sleep -Seconds 2; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }`
