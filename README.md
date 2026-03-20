@@ -2,7 +2,7 @@
 
 Local 2-player **Worms**-style artillery game (moles theme). Built for **LÖVE 11.4** (works with 11.x).
 
-**Version** is tracked in `package.json` (SemVer) for releases and git tags (`v0.1.1`, …).
+**Version** is tracked in `package.json` (SemVer) for releases and git tags (`v0.1.2`, …).
 
 ## Features
 

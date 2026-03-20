@@ -1,6 +1,8 @@
 local mole_ent = require("entities.mole")
 local C = require("data.constants")
 
+local unpack = table.unpack or unpack
+
 local M = {}
 
 local function default_order()
@@ -8,7 +10,7 @@ local function default_order()
 end
 
 function M.rotate_order(order)
-  local o = { unpack(order) }
+  local o = { unpack(order, 1, #order) }
   table.insert(o, table.remove(o, 1))
   return o
 end
