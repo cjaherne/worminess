@@ -3,7 +3,20 @@
 **Agent:** love-ux  
 **Scope:** Screens, HUD, focus/navigation, resolution/scaling, input affordances for menus and gameplay chrome. Does **not** define weapon math, terrain generation, or networking.
 
-**Codebase note (current tree):** The project already defines **`conf.lua`** (1280×720, resizable, `joystick` on), **`main.lua`** (`package.path` + `require("bootstrap")` + `app.register()`), and **`src/bootstrap.lua`** (`setDefaultFilter("nearest")`). Gameplay data and state live under **`src/game/session.lua`**, **`src/game/match_config.lua`**, **`src/game/roster.lua`**, **`src/game/turn_state.lua`**, with world/entities under **`src/world/*`** and **`src/entities/*`**. This UX spec **binds HUD and menus to those module shapes** and aligns **scene IDs** with **`.pipeline/love-architect-design.md`** (`src/scenes/*.lua`).
+**Codebase note (current tree):** The project already defines **`conf.lua`** (1280×720, resizable, `joystick` on), **`main.lua`** (`package.path` + `require("bootstrap")` + `app.register()`), and **`src/bootstrap.lua`** (`setDefaultFilter("nearest")`). Gameplay data and state live under **`src/game/session.lua`**, **`src/game/match_config.lua`**, **`src/game/roster.lua`**, **`src/game/turn_state.lua`**, with world/entities under **`src/world/*`** and **`src/entities/*`**. Scene IDs align with the architect merge (`src/scenes/*.lua`).
+
+### Handoff: canonical documents & anchors (merged `DESIGN.md`)
+
+Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so implementers do not rely on fragile cross-doc section numbers (e.g. “§3.1 UX table”):
+
+| Topic | Where to look in **`DESIGN.md`** |
+|--------|-----------------------------------|
+| **MatchConfig** — field names, types, purpose, validation clamps | Section **“MatchConfig — single consolidated schema (source of truth)”** (table). **In code:** `src/game/match_config.lua` only. |
+| **Session stats** — `scores` = match wins, `matches_completed` = finished matches; UI must label wins vs matches played | Section **“Session stats definition (Overseer / coding contract)”** |
+| **`match_setup`** — dual column, dual Ready, footer, `input_scheme` | Section **“UX — scene graph & wireframes (abridged; full detail in love-ux)”** → **`match_setup` (dual column)** |
+| **Scene list, HUD checklist, pause / `game_over` rules** | Section **“requirementsChecklist — UX (love-ux)”** |
+
+**This file** — **`.pipeline/love-ux-design.md`** — remains **canonical for full UX depth** wherever **`DESIGN.md`** is abridged: **pixel wireframes (§5)**, **widget/copy columns for MatchConfig (§3.2)**, **interactions (§6)**, **accessibility (§7)**, and **structured JSON (§10)**. If anything conflicts, **`DESIGN.md`** wins for **MatchConfig** and **session semantics**, then **`src/game/*.lua`**.
 
 ---
 
