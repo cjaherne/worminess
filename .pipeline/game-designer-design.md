@@ -60,20 +60,19 @@ Traceability: one bullet per distinct requirement from the user task and BigBoss
 ```
 on_match_start():
   turn_player = option_or_random(P1, P2)
-  for each player: mole_index = first_living_or_1
+  for each player p: mole_index[p] = first_living_mole(p)  # typically 1
 
-on_end_turn():
-  turn_player = other(turn_player)
-  if turn_player == player_who_just_finished_cycle:
-    # After full back-and-forth, advance the roster for the player who is ABOUT to act again — implement as:
-    # Actually: clearer rule — advance roster for the player who ENDED their turn? Standard: advance when your turn ends.
-    advance_mole_index(player_who_ended_turn)
+on_end_turn(ended_player):
+  advance_mole_index(ended_player)   # roster pointer moves for NEXT time this player acts
+  turn_player = other(ended_player)
 
 advance_mole_index(p):
-  repeat: mole_index[p] = next_in_ring(mole_index[p]); until mole[p][mole_index] alive or all dead
+  repeat
+    mole_index[p] = next_index_in_ring(mole_index[p], 1..5)
+  until mole[p][mole_index[p]] is alive OR no living moles remain for p
 ```
 
-**Clarification for Coding Agent:** Implement the invariant: **when a player finishes their turn, advance that player’s “next mole” pointer** so the **next time it is their turn**, they control the next living mole. Opponent’s pointer is unchanged on opponent turns.
+**Clarification for Coding Agent:** When the active player **ends their turn**, advance **that player’s** mole roster pointer (skip dead moles). The opponent’s pointer is unchanged. On the **first** turn of the match, do not advance before play — starting indices are each team’s first living mole.
 
 ### Movement & aiming
 
