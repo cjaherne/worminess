@@ -25,7 +25,7 @@
 ```
 love.update(dt)
   → input.poll() → PlayerIntents[1..2]  -- R10: mouse routed only to turn owner when shared_kb
-  → turn_state.on_frame(dt)             -- optional turn timer; end-turn commits handled by scene/input
+  → world/turn_state timer               -- e.g. `turn_state:update_timer` from play/world when turn limit on
   → world.update(dt, intents)         -- moles, projectiles, terrain, damage
   → camera.follow(active_mole)
   → session_scores unchanged until match end
@@ -304,14 +304,18 @@ terrain_gen → (avoid requiring love.* where possible; ok if current code uses 
 {
   "architecture": "LÖVE 11 scene stack (menu → setup → play → end); sim/render/input separation; world.update consumes PlayerIntents; session_scores updated at match end only.",
   "luaModules": {
-    "src/app.lua": "Scene stack, love.* forwarding, service singletons",
-    "src/scenes/play.lua": "Owns World lifecycle, win detection, camera target",
-    "src/input/input_manager.lua": "Public: update(), get_intents(), reconfigure(MatchSettings)",
-    "src/sim/world.lua": "Public: new(settings), update(dt, intents), draw_snapshot accessors",
-    "src/sim/terrain_gen.lua": "Public: build(seed, width, height, rules) → TerrainModel (pure preferred)",
-    "src/sim/turn_state.lua": "Public: init(world, settings), get_turn_player(), get_active_mole_id(), on_end_turn(ended_player), on_frame(dt) for optional timer; advance_mole_index internal per DESIGN.md",
-    "src/data/session_scores.lua": "Public: reset(), record_match_outcome(winner), get_snapshot()",
-    "src/data/match_settings.lua": "Public: defaults(), validate(t), merge_partial(ui_fields)"
+    "src/app.lua": "push/pop/goto, end_match, quit_match_to_results, assets, fonts, viewport draw wrapper",
+    "src/scenes/play.lua": "World lifecycle, pause push, victory → quit_match_to_results",
+    "src/input/input_manager.lua": "Mode + turn_owner; delegates to keyboard_mouse or gamepad",
+    "src/input/keyboard_mouse.lua": "R10 shared_kb: dual keymaps, mouse only for turn owner",
+    "src/input/gamepad.lua": "R11 dual_gamepad: two joysticks, gameplay + menu helpers",
+    "src/sim/world.lua": "Terrain, moles, projectiles, wind, weapons, turn_state integration",
+    "src/sim/terrain_gen.lua": "Procedural terrain for R5; seed from match_settings",
+    "src/sim/turn_state.lua": "new(settings), end_turn, update_timer, active_mole, advance_after_turn — align DESIGN.md Part A pseudocode",
+    "src/data/session_scores.lua": "record_match_outcome, get_snapshot, reset",
+    "src/data/match_settings.lua": "defaults, validate, merge_partial",
+    "src/util/viewport.lua": "Letterbox / logical size for HUD and world draw",
+    "src/audio/sfx.lua": "Procedural SFX"
   },
   "fileStructure": "See §2; root main.lua + conf.lua + src/** + assets/**",
   "loveLifecycle": "main.lua → app.load/update/draw; scenes handle domain; play delegates to world",

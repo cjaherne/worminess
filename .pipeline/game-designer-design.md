@@ -108,7 +108,7 @@ advance_mole_index(p):
 ### Session scoring (since launch)
 
 - On match end: increment wins via **`src/data/session_scores.lua`** (`record_match_outcome` from `app.quit_match_to_results`).
-- **Displayed** in HUD chips + match end (`src/ui/hud.lua`, `match_end.lua`); draws tracked if implemented in session module.
+- **Displayed** in HUD chips + match end (`src/ui/hud.lua`, `match_end.lua`); **`session_scores`** tracks P1/P2 wins, **draws**, and **games_played** (`get_snapshot`).
 - **Not** required to persist across quit (per R6 wording).
 
 ### Match variables (minimum set)
