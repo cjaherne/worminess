@@ -2,7 +2,7 @@
 
 ## Summary
 
-Exploring the codebase to align the design with existing structure, then writing `.pipeline/game-designer-design.md`.
+Reading the codebase to align the design with implemented modules and updating `.pipeline/game-designer-design.md`, including an explicit session-stats definition per overseer feedback.
 
 
 
@@ -12,29 +12,37 @@ Exploring the codebase to align the design with existing structure, then writing
 
 
 
-Workspace is empty (no Lua sources yet). Writing a self-contained game design that references `.pipeline/architecture-brief.md` as the current state and guides the coding agent.
 
 
 
 
-Here’s what was delivered.
 
-## Summary
 
-**Written:** `.pipeline/game-designer-design.md` — full game-design spec for a **LÖVE 11.4** moles/Worms-style game.
 
-Because the repo is still empty (no Lua yet; `.pipeline/architecture-brief.md` shows 0 files), the doc is a **standalone blueprint** and only **hints** at modules (`src/systems/turn.lua`, `weapons.lua`, etc.) so it stays aligned with the handoff: **Architect** owns the real tree, **UX** owns look/HUD.
 
-The spec includes:
 
-- **`requirementsChecklist`** — one bullet per stated requirement (theme, core Worms mechanics, rocket + grenade, 2P local, proc maps, session scores, 5 moles per player, player + mole rotation, match variables like HP, keyboard+mouse and/or controllers).
-- **`mechanics`** — turn model, teams, weapons, explosions, terrain, damage/knockback, wind, match variables, scoring.
-- **`controls`** — dual keyboard layout examples, gamepad mapping, mouse-as-optional, `InputRouter` / intent idea.
-- **`gameLoop`** — menu → setup → play → match over, update/draw order.
-- **`fileStructure`** / **components** / **scenes** / **assets** / **persistence** / **`implementationOrder`** — actionable for the coder.
-- **Pseudocode** for explosions and rotation only (behavioural, not ship-ready Lua).
 
-No `.lua` or other implementation files were added.
+Updating `.pipeline/game-designer-design.md` to align with the implemented `src/` layout and adding the overseer's one-sentence session-stats definition.
+
+
+
+
+## Update complete
+
+`.pipeline/game-designer-design.md` is rewritten to **match the real tree** (`conf.lua`, `main.lua`, `src/bootstrap.lua`, `src/game/*`, `src/data/*`, `src/entities/*`, `src/world/*`, `src/world/mapgen/*`, `src/core/*`) and to **drop** the old “no sources yet” note.
+
+### Overseer ask — session stats (one explicit sentence)
+
+Added a dedicated **“Session stats definition”** block with a single binding sentence for coders: **`scores[1]`/`scores[2]` = match wins since launch (not rounds, not per-player “games played”); `matches_completed` = number of fully finished matches in the session; don’t repurpose these fields for round tallies without renaming and fixing UI copy.** That matches what `src/game/session.lua` already does with `bump_match_win`.
+
+### Everything else
+
+- **requirementsChecklist** still tracks each original-task bullet (including beautiful styling, proc maps, 5 moles, rotations, input modes).
+- **mechanics / controls / gameLoop** are tied to **`turn_state`**, **`roster`**, **`match_config`**, **`weapons.lua`**, **`constants.lua`**, and **mapgen**.
+- **implementationOrder** is a **delta** from the current codebase (orchestrator/input/UI first, not “terrain stub from zero”).
+- **`main.lua` → `app`** is noted; `app.lua` wasn’t in the glob—called out as likely Architect-owned.
+
+No implementation files were added or changed—only `.pipeline/game-designer-design.md`.
 
 ## Files Created/Modified
 - .pipeline/game-designer-design.md

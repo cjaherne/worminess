@@ -86,44 +86,68 @@ src/
 
 ## 3. Key data the UI must bind to (interfaces / schemas)
 
-The Coding Agent should treat these as **view-model fields** (names are suggestive, not API law):
+Bind UI **directly** to existing tables where possible (`src/game/*.lua`). Below maps **UX labels → Lua fields**.
 
-### 3.1 `SessionModel` (persistent for app lifetime)
+### 3.1 Session (`src/game/session.lua`)
 
-```text
-sessionGamesPlayed: integer
-sessionWins: { p1: integer, p2: integer }   # or keyed by team id
-lastMatchResult: enum { p1, p2, draw } | null
-```
+Returned by `session.new()`:
 
-### 3.2 `MatchOptions` (set in `match_setup`, frozen for match)
-
-```text
-molesPerTeam: 5   # fixed for this product vision; UI shows as read-only label unless design expands later
-moleBaseHealth: number   # slider/stepper; show current value large
-# optional future keys reserved in UI copy only: turnTimeSeconds, windStrength, etc.
-```
-
-### 3.3 `TurnPresentation` (HUD reads each frame)
+| Field | UX use |
+|--------|--------|
+| `scores[1]`, `scores[2]` | Session wins since launch; **main_menu**, **pause**, **game_over** headers |
+| `matches_completed` | “Matches played” line (optional; increments via `bump_match_win`) |
+| `last_match_winner` | 1, 2, or nil — highlight on **game_over** |
+| `last_match_config` | **Rematch** pre-fill for **match_setup** |
 
 ```text
-activePlayerIndex: 1 | 2
-activeMoleIndex: 1..5   # within that player's roster
-activeMoleDisplayName: string   # “Mole 3” or custom name
-teamColor: color
-selectedWeaponId: enum { rocket, grenade, ... }
-aimMode: enum { idle, aiming, charging }   # affects HUD hints
-grenadeFuseSeconds: number | null           # show only when grenade armed/flying if applicable
-windVectorLabel: string                     # e.g. “← 3” or icon + chevrons
-scoresThisMatch: { p1: integer, p2: integer }
+-- Pseudocode view-model
+sessionWinsP1, sessionWinsP2 = session:get_scores()
+matchesPlayed = session.matches_completed
 ```
 
-### 3.4 `InputRoutingMode` (for menus)
+### 3.2 Match config (`src/game/match_config.lua`)
 
-```text
-menuOwner: enum { shared_keyboard_mouse, pad1, pad2 }
-# When both pads connected, default menuOwner = pad1; Player 2 uses “Join/Override” only where specified
-```
+Edit in **`match_setup`**; always run **`match_config.validate(c)`** before starting **`play`**. Expose these in the form (clamps are implementation-defined; current code uses HP 1–500, wind ±400, fuse 0.5–8, rounds_to_win 1–9, turn_time_limit 5–120 or nil):
+
+| Field | Widget | UX copy |
+|--------|--------|---------|
+| `mole_max_hp` | Stepper/slider | “Mole health” (large numeral) |
+| `rounds_to_win` | Stepper | “Rounds to win match” |
+| `wind_strength` | Slider + “Off” at 0 | “Wind” (show direction arrow when ≠ 0) |
+| `grenade_fuse_seconds` | Stepper | “Grenade fuse (s)” |
+| `turn_time_limit` | Toggle + stepper or nil | “Turn timer” optional |
+| `friendly_fire` | Toggle | “Friendly fire” (default on per data) |
+| `procedural_seed` | Optional field / “Random” | Debug or “Custom seed” (nil = random) |
+| `input_scheme` | Radio | `"shared_kb"` vs `"dual_gamepad"` (existing constants in code) |
+| `teams_per_player` | Read-only label | From `data.constants.MOLES_PER_TEAM` (5) |
+
+**Dual confirm (product brief):** two **`ready_p1` / `ready_p2`** booleans are **UI-local** until both true, then **Start match** enabled; or require each player to press **Confirm** on their device once settings are valid (see §5.3).
+
+### 3.3 Turn + HUD presentation (`src/game/turn_state.lua` + roster + active mole)
+
+| Field | UX use |
+|--------|--------|
+| `active_player` | 1 \| 2 — turn banner, which control legend to show |
+| `active_mole_slot` | Index into **`team.moles`** for active player’s team |
+| `phase` | `aim`, `firing`, `flying`, `round_end`, `interstitial` — HUD hints, pause certain inputs, **toasts** |
+| `move_budget` | Move “fuel” bar (from constants `MOVE_BUDGET_MAX`) |
+| `aim_angle`, `power`, `charging` | Aim reticle / power bar when `phase == aim` |
+| `weapon_index`, `weapons` | Strip highlight; label from **`require("game.turn_state").current_weapon_id(ts)`** → `rocket` \| `grenade` |
+
+**Per-mole:** `teams[active_player].moles[active_mole_slot].hp` vs `match_config.mole_max_hp` for **health pips** or numeric HP.
+
+**Wind display:** `match_config.wind_strength` (scalar); format as arrow + magnitude.
+
+**Round vs match score in HUD:** if the game layer tracks “rounds won this match”, surface that beside session scores or only on **game_over** — follow merged game-designer spec; minimum is **session** from §3.1.
+
+### 3.4 Input routing (menus + play)
+
+| Concept | Implementation hook (architect) |
+|---------|----------------------------------|
+| `menuOwner` | While in menus, default **keyboard** + **joystick 1** move focus; **joystick 2** optional for **Ready** only in **match_setup** |
+| `input_scheme` | `match_config.input_scheme` — **`play`** scene routes KB/Mouse to **active_player** when `shared_kb`; maps **joystick id** to player when `dual_gamepad` |
+
+When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_setup` **except** dual-ready inputs (§5.3).
 
 ---
 
