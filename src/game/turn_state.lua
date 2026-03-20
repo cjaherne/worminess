@@ -2,7 +2,6 @@ local M = {}
 
 local phases = {
   aim = "aim",
-  firing = "firing",
   flying = "flying",
   round_end = "round_end",
   interstitial = "interstitial",

@@ -95,17 +95,20 @@ local function new()
     love.graphics.setColor(c.void[1], c.void[2], c.void[3], 1)
     love.graphics.rectangle("fill", 0, 0, theme.logical_w, theme.logical_h)
 
+    love.graphics.setFont(theme.font_title)
     love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], 1)
-    love.graphics.printf("Moles", 0, 72, theme.logical_w, "center", 0, 1.6, 1.6)
+    love.graphics.printf("Moles", 0, 56, theme.logical_w, "center")
 
     local s1, s2 = self.ctx.session:get_scores()
     local mc = self.ctx.session.matches_completed
+    love.graphics.setFont(theme.font_hud)
     love.graphics.setColor(c.team_a[1], c.team_a[2], c.team_a[3], 1)
-    love.graphics.printf("P1 match wins: " .. tostring(s1), 80, 120, 520, "left", 0, 1.15, 1.15)
+    love.graphics.printf("P1 match wins: " .. tostring(s1), 80, 118, 520, "left")
     love.graphics.setColor(c.team_b[1], c.team_b[2], c.team_b[3], 1)
-    love.graphics.printf("P2 match wins: " .. tostring(s2), theme.logical_w - 80 - 520, 120, 520, "right", 0, 1.15, 1.15)
+    love.graphics.printf("P2 match wins: " .. tostring(s2), theme.logical_w - 80 - 520, 118, 520, "right")
+    love.graphics.setFont(theme.font_body)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.85)
-    love.graphics.printf("Matches completed: " .. tostring(mc), 0, 148, theme.logical_w, "center", 0, 0.95, 0.95)
+    love.graphics.printf("Matches completed: " .. tostring(mc), 0, 154, theme.logical_w, "center")
 
     local labels = { "Local match", "Options", "Quit" }
     local x0, y0, bw, bh, gap = 80, 160, 520, 56, 56
@@ -118,22 +121,24 @@ local function new()
       end
       love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], sel and 1 or 0.75)
       love.graphics.rectangle("fill", x0, y, bw, bh, 8, 8)
+      love.graphics.setFont(theme.font_body)
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-      love.graphics.printf(labels[i], x0, y + 16, bw, "center", 0, 1.2, 1.2)
+      love.graphics.printf(labels[i], x0, y + 14, bw, "center")
     end
 
     love.graphics.setColor(c.team_a[1], c.team_a[2], c.team_a[3], 0.25)
     love.graphics.rectangle("fill", 640, 80, 560, 560, 12, 12)
+    love.graphics.setFont(theme.font_body)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
-    love.graphics.printf("Art / mole panel\n(placeholder)", 640, 300, 560, "center", 0, 1, 1)
+    love.graphics.printf("Art / mole panel\n(placeholder)", 640, 292, 560, "center")
 
     if self.options_toast_t > 0 then
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.9)
-      love.graphics.printf("Options: not in this build (stub).", 0, 620, theme.logical_w, "center", 0, 1, 1)
+      love.graphics.printf("Options: not in this build (stub).", 0, 612, theme.logical_w, "center")
     end
 
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.45)
-    love.graphics.printf("Up/Down · Enter · Click · Pad A/B", 0, 684, theme.logical_w, "center", 0, 0.75, 0.75)
+    love.graphics.printf("Up/Down · Enter · Click · Pad A/B", 0, 676, theme.logical_w, "center")
   end
 
   return self

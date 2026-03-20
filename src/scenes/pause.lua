@@ -101,24 +101,23 @@ local function new(play_scene)
 
     love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], 1)
     love.graphics.rectangle("fill", 340, 160, 600, 400, 12, 12)
+    love.graphics.setFont(theme.font_banner)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-    love.graphics.printf("Paused", 340, 180, 600, "center", 0, 1.4, 1.4)
+    love.graphics.printf("Paused", 340, 172, 600, "center")
 
     local s1, s2 = self.ctx.session:get_scores()
     local mc = self.ctx.session.matches_completed
+    love.graphics.setFont(theme.font_body)
     love.graphics.printf(
       "Session · match wins: P1 " .. tostring(s1) .. "   P2 " .. tostring(s2) .. "\nMatches completed: " .. tostring(mc),
       360,
-      220,
+      214,
       560,
-      "center",
-      0,
-      0.78,
-      0.78
+      "center"
     )
 
     local labels = { "Resume", "Restart match", "Match setup", "Main menu" }
-    local bx, by, bw, bh, gap = 380, 280, 520, 48, 12
+    local bx, by, bw, bh, gap = 380, 278, 520, 48, 12
     for i = 1, #labels do
       local yy = by + (i - 1) * (bh + gap)
       local sel = (self.focus == i)
@@ -127,11 +126,11 @@ local function new(play_scene)
         love.graphics.rectangle("fill", bx - 8, yy - 6, bw + 16, bh + 12, 8, 8)
       end
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.9)
-      love.graphics.printf(labels[i], bx, yy + 12, bw, "center", 0, 1, 1)
+      love.graphics.printf(labels[i], bx, yy + 10, bw, "center")
     end
 
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
-    love.graphics.printf("Esc / B / Start · Up/Down · Enter", 0, 520, theme.logical_w, "center", 0, 0.72, 0.72)
+    love.graphics.printf("Esc / B / Start · Up/Down · Enter", 0, 512, theme.logical_w, "center")
   end
 
   return self

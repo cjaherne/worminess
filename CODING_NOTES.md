@@ -12,6 +12,7 @@
 
 ## Suggestions
 
+- **Typography:** UI copy uses **`theme.font_title` / `font_banner` / `font_hud` / `font_body`** with **`printf` scale 1.0** so menu text stays ≥22px and primary HUD ≥28px effective (see overseer audit). Tweak pixel positions if localized strings run long.
 - Add a tiny on-screen legend in **match_setup** for gamepad **X/Y** ready chips (already in footer for keys **1/2**).
 - Consider sub-stepping grenades the same way as rockets if high-speed tunnels appear.
 - Optional: persist session stats with `love.filesystem` (design v1 is RAM-only).

@@ -19,10 +19,18 @@ M.logical_h = constants.WORLD_H
 
 M.font_body = nil
 M.font_hud = nil
+--- Large titles (boot splash, main menu wordmark).
+M.font_title = nil
+--- Section headers (match setup, pause, game over) — ≥28 logical px at scale 1.0.
+M.font_banner = nil
 
 function M.load_fonts()
-  M.font_body = love.graphics.newFont(22)
-  M.font_hud = love.graphics.newFont(28)
+  -- Body/menu copy: ≥22px effective when drawn at printf scale 1.0.
+  M.font_body = love.graphics.newFont(24)
+  -- Primary HUD clusters: ≥28px at scale 1.0.
+  M.font_hud = love.graphics.newFont(30)
+  M.font_title = love.graphics.newFont(56)
+  M.font_banner = love.graphics.newFont(34)
   love.graphics.setFont(M.font_body)
 end
 

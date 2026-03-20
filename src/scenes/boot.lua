@@ -36,26 +36,19 @@ local function new()
     local subtitle = "Local 2 players · Moles with heavy weapons"
     local pulse = 0.55 + 0.45 * math.sin(self.t * math.pi * 2 * PULSE_HZ)
 
+    love.graphics.setFont(theme.font_title)
     love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], 1)
-    love.graphics.printf(title, 0, 240, theme.logical_w, "center", 0, 2.2, 2.2)
+    love.graphics.printf(title, 0, 228, theme.logical_w, "center")
+    love.graphics.setFont(theme.font_body)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.92)
-    love.graphics.printf(subtitle, 80, 320, theme.logical_w - 160, "center", 0, 1.05, 1.05)
+    love.graphics.printf(subtitle, 80, 312, theme.logical_w - 160, "center")
 
     love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], pulse)
-    love.graphics.printf(
-      "Press Enter / Space / A to start",
-      0,
-      420,
-      theme.logical_w,
-      "center",
-      0,
-      1.1,
-      1.1
-    )
+    love.graphics.printf("Press Enter / Space / A to start", 0, 404, theme.logical_w, "center")
 
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.55)
-    love.graphics.printf("LÖVE 11.4 · v0", 40, 668, 600, "left", 0, 0.65, 0.65)
-    love.graphics.printf("Moles / Worms-like", theme.logical_w - 640 - 40, 668, 600, "right", 0, 0.65, 0.65)
+    love.graphics.printf("LÖVE 11.4 · v0", 40, 668, 600, "left")
+    love.graphics.printf("Moles / Worms-like", theme.logical_w - 640 - 40, 668, 600, "right")
   end
 
   function self:keypressed(key)

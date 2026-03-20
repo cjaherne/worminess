@@ -1,4 +1,5 @@
 local C = require("data.constants")
+local theme = require("ui.theme")
 
 local M = {}
 
@@ -56,7 +57,10 @@ function M.draw(m, team_color)
   love.graphics.setColor(0.12, 0.08, 0.12, 0.85)
   love.graphics.circle("line", m.x, m.y, r)
   love.graphics.setColor(0.95, 0.9, 0.85, 1)
-  love.graphics.printf(tostring(m.index), m.x - r, m.y - 6, r * 2, "center", 0, 0.65, 0.65)
+  local prev = love.graphics.getFont()
+  love.graphics.setFont(theme.font_body or prev)
+  love.graphics.printf(tostring(m.index), m.x - r, m.y - 8, r * 2, "center")
+  love.graphics.setFont(prev)
 end
 
 return M

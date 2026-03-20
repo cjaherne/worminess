@@ -35,29 +35,23 @@ function M.draw(ctx)
   love.graphics.printf(
     "Round " .. tostring(ctx.round_index) .. " · " .. fmt_player(ap) .. " · Mole " .. tostring(mi) .. " · " .. phase_label,
     lw * 0.5 - 270,
-    32,
+    28,
     540,
-    "center",
-    0,
-    0.85,
-    0.85
+    "center"
   )
 
-  love.graphics.setFont(theme.font_body or love.graphics.getFont())
+  love.graphics.setFont(theme.font_hud or love.graphics.getFont())
   love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.85)
   local s1, s2 = ctx.session:get_scores()
-  love.graphics.printf("Session match wins  " .. tostring(s1) .. " — " .. tostring(s2), lw * 0.5 - 200, 78, 400, "center", 0, 0.7, 0.7)
+  love.graphics.printf("Session match wins  " .. tostring(s1) .. " — " .. tostring(s2), lw * 0.5 - 200, 76, 400, "center")
 
   local wind = cfg.wind_strength or 0
   love.graphics.printf(
     wind == 0 and "Wind: calm" or ("Wind: " .. (wind > 0 and "→ " or "← ") .. string.format("%.0f", math.abs(wind))),
     lw * 0.5 - 160,
-    100,
+    102,
     320,
-    "center",
-    0,
-    0.8,
-    0.8
+    "center"
   )
 
   if ts.phase == turn_state.phases.interstitial and ctx.toast_text then
@@ -65,43 +59,47 @@ function M.draw(ctx)
     love.graphics.setColor(0, 0, 0, 0.38 + 0.12 * pulse)
     love.graphics.rectangle("fill", 0, 200, lw, 120, 0, 0)
     love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], pulse)
-    love.graphics.printf(ctx.toast_text, 40, 232, lw - 80, "center", 0, 1.05, 1.05)
+    love.graphics.setFont(theme.font_hud or love.graphics.getFont())
+    love.graphics.printf(ctx.toast_text, 40, 228, lw - 80, "center")
   end
 
   local mb = ts.move_budget or 0
+  love.graphics.setFont(theme.font_hud or love.graphics.getFont())
   love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.9)
-  love.graphics.printf("Move", 48, 620, 120, "left", 0, 0.75, 0.75)
+  love.graphics.printf("Move", 48, 600, 120, "left")
   love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], 0.35)
-  love.graphics.rectangle("fill", 48, 642, 200, 12, 4, 4)
+  love.graphics.rectangle("fill", 48, 626, 200, 12, 4, 4)
   love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], 0.9)
   local bw = 200 * math.max(0, math.min(1, mb / require("data.constants").MOVE_BUDGET_MAX))
-  love.graphics.rectangle("fill", 48, 642, bw, 12, 4, 4)
+  love.graphics.rectangle("fill", 48, 626, bw, 12, 4, 4)
 
   if ts.phase == turn_state.phases.aim then
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.9)
-    love.graphics.printf("Power", lw * 0.5 - 100, 620, 200, "center", 0, 0.75, 0.75)
+    love.graphics.printf("Power", lw * 0.5 - 100, 600, 200, "center")
     love.graphics.setColor(c.danger[1], c.danger[2], c.danger[3], 0.25)
-    love.graphics.rectangle("fill", lw * 0.5 - 100, 642, 200, 12, 4, 4)
+    love.graphics.rectangle("fill", lw * 0.5 - 100, 626, 200, 12, 4, 4)
     love.graphics.setColor(c.danger[1], c.danger[2], c.danger[3], 0.95)
-    love.graphics.rectangle("fill", lw * 0.5 - 100, 642, 200 * ts.power, 12, 4, 4)
+    love.graphics.rectangle("fill", lw * 0.5 - 100, 626, 200 * ts.power, 12, 4, 4)
   end
 
-  local wy = 656
+  local wy = 654
   local wx = 48
+  local cell = 88
   for i, wid in ipairs(ts.weapons) do
     local def = weapons_data[wid]
     local sel = (ts.weapon_index == i)
     love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], sel and 1 or 0.55)
-    love.graphics.rectangle("fill", wx, wy, 64, 64, 6, 6)
+    love.graphics.rectangle("fill", wx, wy, cell, 72, 6, 6)
+    love.graphics.setFont(theme.font_hud or love.graphics.getFont())
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
     if def then
-      love.graphics.printf(def.name, wx, wy + 22, 64, "center", 0, 0.55, 0.55)
+      love.graphics.printf(def.name, wx, wy + 10, cell, "center")
     end
     if sel then
       love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], 1)
-      love.graphics.rectangle("line", wx - 2, wy - 2, 68, 68, 8, 8)
+      love.graphics.rectangle("line", wx - 2, wy - 2, cell + 4, 76, 8, 8)
     end
-    wx = wx + 64 + 16
+    wx = wx + cell + 16
   end
 
   local fuse_txt = nil
@@ -113,8 +111,9 @@ function M.draw(ctx)
     end
   end
   if fuse_txt then
+    love.graphics.setFont(theme.font_hud or love.graphics.getFont())
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-    love.graphics.printf(fuse_txt, lw - 280, wy + 8, 240, "right", 0, 0.85, 0.85)
+    love.graphics.printf(fuse_txt, lw - 280, wy + 12, 240, "right")
   end
 
   local scheme = cfg.input_scheme or "shared_kb"
@@ -125,12 +124,14 @@ function M.draw(ctx)
     hint = "Your turn: stick aim · A fire · LB/RB or triggers charge power · Start = pause (any pad)"
   end
   local hint_a = 0.58 + 0.2 * math.sin(love.timer.getTime() * 2 * math.pi * 0.75)
+  love.graphics.setFont(theme.font_body or love.graphics.getFont())
   love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], hint_a)
-  love.graphics.printf(hint, 24, 568, lw - 48, "center", 0, 0.72, 0.72)
+  love.graphics.printf(hint, 24, 556, lw - 48, "center")
 
   if ts.turn_time_left then
+    love.graphics.setFont(theme.font_hud or love.graphics.getFont())
     love.graphics.setColor(c.danger[1], c.danger[2], c.danger[3], 0.95)
-    love.graphics.printf(string.format("Turn time: %.0fs", ts.turn_time_left), lw - 220, 120, 200, "right", 0, 0.8, 0.8)
+    love.graphics.printf(string.format("Turn time: %.0fs", ts.turn_time_left), lw - 220, 118, 200, "right")
   end
 end
 

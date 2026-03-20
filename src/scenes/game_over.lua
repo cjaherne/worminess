@@ -109,7 +109,11 @@ local function new(opts)
       return
     end
     local lx, ly = layout.screen_to_logical(x, y)
-    local bx, by, bw, bh, gap = 400, 360, 480, 44, 10
+    local bx, bw = 400, 480
+    local by, bh, gap = 350, 52, 10
+    if self.variant ~= "round_end" then
+      by, bh, gap = 332, 46, 10
+    end
     local n = n_items()
     for i = 1, n do
       local yy = by + (i - 1) * (bh + gap)
@@ -161,74 +165,52 @@ local function new(opts)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
 
     if self.variant == "round_end" then
-      love.graphics.printf("Round finished", 340, 170, 600, "center", 0, 1.35, 1.35)
+      love.graphics.setFont(theme.font_banner)
+      love.graphics.printf("Round finished", 340, 162, 600, "center")
+      love.graphics.setFont(theme.font_hud)
       love.graphics.setColor(c.team_a[1], c.team_a[2], c.team_a[3], 1)
       if self.winner == 2 then
         love.graphics.setColor(c.team_b[1], c.team_b[2], c.team_b[3], 1)
       end
-      love.graphics.printf(
-        "Winner: Player " .. tostring(self.winner or "?"),
-        340,
-        230,
-        600,
-        "center",
-        0,
-        1.2,
-        1.2
-      )
+      love.graphics.printf("Winner: Player " .. tostring(self.winner or "?"), 340, 212, 600, "center")
       local pulse = 0.65 + 0.35 * math.sin(love.timer.getTime() * 2 * math.pi * 0.85)
+      love.graphics.setFont(theme.font_body)
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.55 + 0.35 * pulse)
-      love.graphics.printf("Continue → next round (new terrain)", 340, 290, 600, "center", 0, 0.95, 0.95)
+      love.graphics.printf("Continue → next round (new terrain)", 340, 268, 600, "center")
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.85)
       local sel = (self.focus == 1)
       if sel then
         love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], 0.35)
         love.graphics.rectangle("fill", 400, 350, 480, 52, 8, 8)
       end
+      love.graphics.setFont(theme.font_body)
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-      love.graphics.printf("Continue", 400, 366, 480, "center", 0, 1.05, 1.05)
+      love.graphics.printf("Continue", 400, 364, 480, "center")
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
-      love.graphics.printf("A / Enter · B · D-pad", 340, 418, 600, "center", 0, 0.72, 0.72)
+      love.graphics.printf("A / Enter · B · D-pad", 340, 412, 600, "center")
     else
-      love.graphics.printf("Match finished", 340, 170, 600, "center", 0, 1.45, 1.45)
+      love.graphics.setFont(theme.font_banner)
+      love.graphics.printf("Match finished", 340, 158, 600, "center")
+      love.graphics.setFont(theme.font_hud)
       love.graphics.setColor(c.team_a[1], c.team_a[2], c.team_a[3], 1)
       if self.winner == 2 then
         love.graphics.setColor(c.team_b[1], c.team_b[2], c.team_b[3], 1)
       end
-      love.graphics.printf(
-        "Champion: Player " .. tostring(self.winner or "?"),
-        340,
-        220,
-        600,
-        "center",
-        0,
-        1.25,
-        1.25
-      )
+      love.graphics.printf("Champion: Player " .. tostring(self.winner or "?"), 340, 206, 600, "center")
       local s1, s2 = self.session:get_scores()
+      love.graphics.setFont(theme.font_body)
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.9)
-      love.graphics.printf(
-        "Session match wins · P1: " .. tostring(s1) .. "   P2: " .. tostring(s2),
-        340,
-        272,
-        600,
-        "center",
-        0,
-        0.9,
-        0.9
-      )
+      love.graphics.printf("Session match wins · P1: " .. tostring(s1) .. "   P2: " .. tostring(s2), 340, 258, 600, "center")
       love.graphics.printf(
         "Matches completed (session): " .. tostring(self.session.matches_completed),
         340,
-        300,
+        286,
         600,
-        "center",
-        0,
-        0.82,
-        0.82
+        "center"
       )
       local labels = { "Rematch", "New setup", "Main menu" }
-      local bx, by, bw, bh, gap = 400, 352, 480, 44, 10
+      local bx, by, bw, bh, gap = 400, 332, 480, 46, 10
+      love.graphics.setFont(theme.font_body)
       for i = 1, #labels do
         local yy = by + (i - 1) * (bh + gap)
         local sel = (self.focus == i)
@@ -237,10 +219,10 @@ local function new(opts)
           love.graphics.rectangle("fill", bx - 6, yy - 4, bw + 12, bh + 8, 6, 6)
         end
         love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-        love.graphics.printf(labels[i], bx, yy + 10, bw, "center", 0, 1, 1)
+        love.graphics.printf(labels[i], bx, yy + 10, bw, "center")
       end
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
-      love.graphics.printf("D-pad · Enter · Click", 340, 500, 600, "center", 0, 0.72, 0.72)
+      love.graphics.printf("D-pad · Enter · Click", 340, 492, 600, "center")
     end
   end
 

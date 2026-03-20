@@ -201,27 +201,27 @@ local function new()
       return lx >= px and lx <= px + pw and ly >= py and ly <= py + ph
     end
 
-    if hit(160, 520, 180, 40) then
+    if hit(160, 518, 180, 42) then
       self.ready_p1 = not self.ready_p1
       return
     end
-    if hit(360, 520, 180, 40) then
+    if hit(360, 518, 180, 42) then
       self.ready_p2 = not self.ready_p2
       return
     end
-    if hit(160, 640, 140, 44) then
+    if hit(160, 646, 140, 46) then
       self.focus = F_BACK
       local mm = require("scenes.main_menu").new()
       self.ctx.scenes:replace(mm)
       return
     end
-    if hit(980, 640, 200, 44) then
+    if hit(980, 632, 200, 46) then
       self.focus = F_START
       self:validate_and_start()
       return
     end
 
-    local colx, y0, rowh = 140, 118, 36
+    local colx, rowh = 132, 38
     local rows = {
       F_MOLE,
       F_ROUNDS,
@@ -235,8 +235,8 @@ local function new()
       F_SCHEME,
     }
     for i, fid in ipairs(rows) do
-      local yy = y0 + (i - 1) * rowh
-      if hit(colx, yy - 4, 900, rowh - 4) then
+      local yy = 136 + (i - 1) * rowh
+      if hit(colx, yy - 6, 1016, rowh) then
         self.focus = fid
         return
       end
@@ -258,50 +258,53 @@ local function new()
 
     love.graphics.setColor(c.paper[1], c.paper[2], c.paper[3], 1)
     love.graphics.rectangle("fill", 120, 100, 1040, 520, 10, 10)
+    love.graphics.setFont(theme.font_banner)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-    love.graphics.printf("Match setup", 0, 112, theme.logical_w, "center", 0, 1.35, 1.35)
+    love.graphics.printf("Match setup", 0, 104, theme.logical_w, "center")
 
     local function row(fid, label, value_str, y)
       local sel = (self.focus == fid)
       if sel then
         love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], 0.22)
-        love.graphics.rectangle("fill", 132, y - 6, 1016, 30, 6, 6)
+        love.graphics.rectangle("fill", 132, y - 6, 1016, 34, 6, 6)
       end
+      love.graphics.setFont(theme.font_body)
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.92)
-      love.graphics.printf(label, 150, y, 420, "left", 0, 0.92, 0.92)
-      love.graphics.printf(value_str, 520, y, 600, "left", 0, 0.95, 0.95)
+      love.graphics.printf(label, 150, y, 420, "left")
+      love.graphics.printf(value_str, 520, y, 600, "left")
     end
 
-    local y = 140
+    local y = 136
+    local dy = 38
     row(F_MOLE, "Mole health", tostring(self.cfg.mole_max_hp), y)
-    y = y + 36
+    y = y + dy
     row(F_ROUNDS, "Rounds to win match", tostring(self.cfg.rounds_to_win), y)
-    y = y + 36
+    y = y + dy
     local wtxt = self.cfg.wind_strength == 0 and "0 (off)" or tostring(self.cfg.wind_strength)
     row(F_WIND, "Wind (← / →)", wtxt, y)
-    y = y + 36
+    y = y + dy
     row(F_FUSE, "Grenade fuse (s)", string.format("%.1f", self.cfg.grenade_fuse_seconds), y)
-    y = y + 36
+    y = y + dy
     row(F_TIMER_ON, "Turn timer", self.timer_on and "On" or "Off", y)
-    y = y + 36
+    y = y + dy
     row(
       F_TIMER_VAL,
       "Turn seconds",
       self.timer_on and tostring(self.cfg.turn_time_limit or 45) or "—",
       y
     )
-    y = y + 36
+    y = y + dy
     row(F_FF, "Friendly fire", self.cfg.friendly_fire and "On" or "Off", y)
-    y = y + 36
+    y = y + dy
     row(F_SEED_MODE, "Custom seed", self.use_custom_seed and "Yes" or "Random", y)
-    y = y + 36
+    y = y + dy
     row(
       F_SEED_VAL,
       "Seed value",
       self.use_custom_seed and tostring(self.cfg.procedural_seed or 0) or "—",
       y
     )
-    y = y + 36
+    y = y + dy
     row(
       F_SCHEME,
       "Input",
@@ -309,45 +312,30 @@ local function new()
       y
     )
 
+    love.graphics.setFont(theme.font_body)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.75)
-    love.graphics.printf("Moles per player: " .. tostring(C.MOLES_PER_TEAM) .. " (rotation each round)", 140, 500, 1000, "left", 0, 0.78, 0.78)
+    love.graphics.printf("Moles per player: " .. tostring(C.MOLES_PER_TEAM) .. " (rotation each round)", 140, 492, 1000, "left")
 
     local rp1 = self.ready_p1
     local rp2 = self.ready_p2
     love.graphics.setColor(c.team_a[1], c.team_a[2], c.team_a[3], rp1 and 0.55 or 0.2)
-    love.graphics.rectangle("fill", 160, 520, 180, 40, 8, 8)
+    love.graphics.rectangle("fill", 160, 518, 180, 42, 8, 8)
+    love.graphics.setFont(theme.font_body)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 1)
-    love.graphics.printf("P1 Ready" .. (rp1 and " ✓" or ""), 160, 532, 180, "center", 0, 0.85, 0.85)
+    love.graphics.printf("P1 Ready" .. (rp1 and " ✓" or ""), 160, 528, 180, "center")
 
     love.graphics.setColor(c.team_b[1], c.team_b[2], c.team_b[3], rp2 and 0.55 or 0.2)
-    love.graphics.rectangle("fill", 360, 520, 180, 40, 8, 8)
-    love.graphics.printf("P2 Ready" .. (rp2 and " ✓" or ""), 360, 532, 180, "center", 0, 0.85, 0.85)
+    love.graphics.rectangle("fill", 360, 518, 180, 42, 8, 8)
+    love.graphics.printf("P2 Ready" .. (rp2 and " ✓" or ""), 360, 528, 180, "center")
 
     if self.cfg.input_scheme == "dual_gamepad" then
       devices.refresh_joysticks()
       local j1 = devices.joy_p1 ~= nil
       local j2 = devices.joy_p2 ~= nil
+      love.graphics.setFont(theme.font_body)
       love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.85)
-      love.graphics.printf(
-        j1 and "Controller 1 ✓" or "Controller 1: connect",
-        560,
-        520,
-        300,
-        "left",
-        0,
-        0.78,
-        0.78
-      )
-      love.graphics.printf(
-        j2 and "Controller 2 ✓" or "Controller 2: press A to assign",
-        560,
-        544,
-        420,
-        "left",
-        0,
-        0.78,
-        0.78
-      )
+      love.graphics.printf(j1 and "Controller 1 ✓" or "Controller 1: connect", 560, 520, 300, "left")
+      love.graphics.printf(j2 and "Controller 2 ✓" or "Controller 2: press A to assign", 560, 548, 420, "left")
     end
 
     local can_start = self.ready_p1 and self.ready_p2
@@ -355,28 +343,26 @@ local function new()
       can_start = can_start and devices.has_dual_ready()
     end
     love.graphics.setColor(c.accent[1], c.accent[2], c.accent[3], can_start and 0.45 or 0.12)
-    love.graphics.rectangle("fill", 980, 640, 200, 44, 8, 8)
+    love.graphics.rectangle("fill", 980, 632, 200, 46, 8, 8)
+    love.graphics.setFont(theme.font_body)
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], can_start and 1 or 0.45)
-    love.graphics.printf("Start match", 980, 654, 200, "center", 0, 0.95, 0.95)
+    love.graphics.printf("Start match", 980, 646, 200, "center")
 
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.8)
-    love.graphics.printf("Back", 160, 654, 140, "center", 0, 0.9, 0.9)
+    love.graphics.printf("Back", 160, 646, 140, "center")
 
     if self.err_text then
       love.graphics.setColor(c.danger[1], c.danger[2], c.danger[3], 1)
-      love.graphics.printf(self.err_text, 140, 580, 1000, "center", 0, 0.88, 0.88)
+      love.graphics.printf(self.err_text, 140, 574, 1000, "center")
     end
 
     love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.5)
     love.graphics.printf(
       "Tab/↑↓ focus · ←/→ adjust · 1 / 2 = P1/P2 Ready · Pad X/Y ready · Esc back",
       0,
-      692,
+      684,
       theme.logical_w,
-      "center",
-      0,
-      0.68,
-      0.68
+      "center"
     )
   end
 
