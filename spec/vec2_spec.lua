@@ -1,0 +1,40 @@
+local vec2 = require("util.vec2")
+
+describe("util.vec2", function()
+  it("len computes hypotenuse", function()
+    assert.are.equal(5, vec2.len(3, 4))
+  end)
+
+  it("normalize scales to unit length", function()
+    local x, y = vec2.normalize(3, 4)
+    assert.is_true(math.abs(x - 0.6) < 1e-9)
+    assert.is_true(math.abs(y - 0.8) < 1e-9)
+  end)
+
+  it("normalize near-zero falls back to (1,0)", function()
+    local x, y = vec2.normalize(1e-9, 0)
+    assert.are.equal(1, x)
+    assert.are.equal(0, y)
+  end)
+
+  it("dot multiplies and sums components", function()
+    assert.are.equal(11, vec2.dot(1, 2, 3, 4))
+  end)
+
+  it("add sums vectors", function()
+    local x, y = vec2.add(1, 2, 30, 40)
+    assert.are.equal(31, x)
+    assert.are.equal(42, y)
+  end)
+
+  it("scale multiplies both components", function()
+    local x, y = vec2.scale(2, -3, 4)
+    assert.are.equal(8, x)
+    assert.are.equal(-12, y)
+  end)
+
+  it("angle_to matches atan2 of direction", function()
+    local a = vec2.angle_to(0, -1)
+    assert.is_true(math.abs(a - (-math.pi / 2)) < 1e-9)
+  end)
+end)

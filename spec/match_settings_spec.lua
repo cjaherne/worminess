@@ -1,0 +1,41 @@
+local match_settings = require("data.match_settings")
+
+describe("data.match_settings", function()
+  it("defaults() returns a fresh table", function()
+    local a = match_settings.defaults()
+    local b = match_settings.defaults()
+    assert.is_true(a ~= b)
+    a.mole_max_hp = 999
+    assert.are_not.equal(999, b.mole_max_hp)
+  end)
+
+  it("validate clamps hp and forces moles_per_team to 5", function()
+    local s = match_settings.validate({ mole_max_hp = 3, moles_per_team = 99 })
+    assert.are.equal(5, s.moles_per_team)
+    assert.are.equal(10, s.mole_max_hp)
+    s = match_settings.validate({ mole_max_hp = 9000 })
+    assert.are.equal(500, s.mole_max_hp)
+  end)
+
+  it("validate normalizes first_player", function()
+    assert.are.equal("random", match_settings.validate({ first_player = "nope" }).first_player)
+    assert.are.equal("1", match_settings.validate({ first_player = "1" }).first_player)
+  end)
+
+  it("validate input_mode is shared_kb or dual_gamepad", function()
+    assert.are.equal("shared_kb", match_settings.validate({}).input_mode)
+    assert.are.equal("dual_gamepad", match_settings.validate({ input_mode = "dual_gamepad" }).input_mode)
+    assert.are.equal("shared_kb", match_settings.validate({ input_mode = "other" }).input_mode)
+  end)
+
+  it("validate wind presets", function()
+    assert.are.equal("off", match_settings.validate({ wind = "OFF" }).wind)
+    assert.are.equal("low", match_settings.validate({ wind = "low" }).wind)
+  end)
+
+  it("merge_partial overlays and validates", function()
+    local s = match_settings.merge_partial(nil, { mole_max_hp = 50, map_seed = 7.9 })
+    assert.are.equal(50, s.mole_max_hp)
+    assert.are.equal(7, s.map_seed)
+  end)
+end)

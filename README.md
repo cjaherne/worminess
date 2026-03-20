@@ -1,0 +1,79 @@
+# Moles
+
+Local two-player, turn-based artillery game (Worms-style) built with **LÖVE 11.4**. Each team fields **five** moles; players alternate each turn, and the active **mole slot** advances so everyone gets a turn before the roster repeats.
+
+**Version:** see `package.json` (`version` field). Automated checks: `npm run build` from the repo root (verifies core files are present).
+
+## Session loop
+
+`main.lua` registers LÖVE callbacks and forwards **`love.load`**, **`love.update`**, and **`love.draw`** to **`src/app.lua`**, which runs the active **scene** (menu → setup → play, etc.) at logical **1280×720** with letterboxing. Audio is muted while the window is unfocused (`love.focus`).
+
+## Maps & combat (core loop)
+
+- **Terrain:** Each match builds a new **procedural** heightfield in **`src/sim/terrain_gen.lua`** (seed from setup or random), destructible via explosions in **`src/sim/terrain.lua`** / **`damage.lua`**.
+- **Weapons:** **Rocket** (fast, impact) vs **grenade** (arc, timed fuse, bounce) in **`src/sim/weapons/`**, integrated in **`src/sim/world.lua`**.
+- **Turns:** Two local players alternate; one mole per turn; **end turn** after moving/firing — see **`src/sim/turn_state.lua`**.
+
+## Match setup (options)
+
+From **Match setup** before play you can tune **mole max HP**, **first player** (P1 / P2 / random), **friendly fire**, **turn time limit** (or off), **map seed** (blank = random procedural map), **wind** strength, and **input mode** — shared **keyboard + mouse** or **two gamepads** (first two joysticks). Roster size is fixed at five moles per team for this build.
+
+## Run
+
+1. Install [LÖVE 11.4](https://love2d.org/) (or a compatible 11.x build).
+2. From this project root:
+
+```bash
+love .
+```
+
+On Windows, you can drag the project folder onto `love.exe` or set `love` on your PATH.
+
+## Tests
+
+Lua unit tests use **busted** (`spec/`, `spec/spec_helper.lua`, `.busted`). See **[TESTING.md](./TESTING.md)** for install notes and the exact command used on Windows (Lua 5.4 + LuaRocks paths).
+
+## Controls
+
+### Shared keyboard + mouse
+
+- **Mouse** (active player only): aim; **left click** fires.
+- **Player 1:** `A`/`D` move, `W` jump, `Q`/`E` aim, `Z`/`X` power, `F` fire, `G` end turn, `1`/`2` rocket/grenade, `Tab` cycle weapon.
+- **Player 2:** arrows move, `Up`/`Right Shift` jump, `[` / `]` aim, `I`/`K` power, `;` / `Enter` / numpad `Enter` / `Right Ctrl` fire, `Backspace` or `\` end turn, `,` / `.` weapons, `-`/`=` cycle weapon.
+
+### Two gamepads (Match setup → input mode)
+
+Connect two controllers. **Player 1** uses the first joystick in `love.joystick.getJoysticks()`, **Player 2** the second.
+
+- Left stick: move · **A**: jump · **Right stick**: aim · **Triggers**: power · **B**: fire · **LB/RB**: cycle weapon · **Y**: end turn · **Start**: pause / resume pause menu.
+
+### Menus (any connected gamepad)
+
+Uses the **first** gamepad in `love.joystick.getJoysticks()`: **D-pad** or **left stick** to move focus (with short cooldown), **A** to confirm, **B** to go back (e.g. setup → title, pause → resume, results → title). **Match results:** **X** = new setup.
+
+### Audio
+
+Short **procedural** sounds for weapon fire, explosions, and UI (`src/audio/sfx.lua`). Add files under `assets/audio/` later if you want recorded SFX.
+
+## HUD (in match)
+
+- **Top left:** whose turn it is, team, active mole **slot**, current mole **HP**, phase hint, optional **turn timer**.
+- **Top right:** **session wins** for P1 / P2 and **draws** (since launch), plus total matches finished.
+- **Lower panels:** weapon selection (rocket / grenade icons), aim angle, power, live **grenade fuse** when one is in flight; **center** “**Team vitality**” — each team’s **total HP** vs roster cap, **living mole count**, current **input mode**, and **Friendly fire ON** when enabled; **wind** readout; bottom **roster** with per-slot HP bars and numbers (active mole outlined).
+- **Help strip:** condensed controls for **shared keyboard + mouse** vs **two gamepads** (matches Match setup → Input).
+- **Turn handoff:** brief **toast** when the active player or mole slot changes after a turn.
+
+## Project layout
+
+- `main.lua` / `conf.lua` — entry and window (1280×720 logical, resizable).
+- `src/app.lua` — scene stack, assets, lifecycle.
+- `src/scenes/` — menu, match setup, play, pause, match end.
+- `src/sim/` — terrain, physics, moles, weapons, turn state, world.
+- `src/input/` — shared keyboard/mouse and dual gamepad routing.
+- `src/audio/` — lightweight procedural SFX.
+- `src/util/gamepad_menu.lua` — menu navigation helper.
+- `assets/sprites/` — mole, weapon, and HUD art (see `ASSETS.md`).
+
+## Requirements
+
+Gameplay targets **R1–R11** in `REQUIREMENTS.md`; design authority is `DESIGN.md`. See `CODING_NOTES.md` for intentional deviations and environment notes.

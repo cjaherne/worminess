@@ -1,0 +1,10 @@
+local reg = require("sim.weapons.registry")
+
+describe("sim.weapons.registry", function()
+  it("exposes stable slots and names", function()
+    assert.are.equal(1, reg.rocket)
+    assert.are.equal(2, reg.grenade)
+    assert.are.equal("rocket", reg.names[1])
+    assert.are.equal("grenade", reg.names[2])
+  end)
+end)

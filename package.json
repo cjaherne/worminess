@@ -1,0 +1,9 @@
+{
+  "name": "moles",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Local two-player Worms-style game (LÖVE)",
+  "scripts": {
+    "build": "node tools/release-check.mjs"
+  }
+}

@@ -1,0 +1,36 @@
+return {
+  cell = 4,
+  grid_w = 320,
+  grid_h = 180,
+  gravity = 520,
+  mole_radius = 16,
+  jump_speed = 320,
+  walk_speed = 140,
+  max_dt = 1 / 30,
+  weapon = {
+    rocket_speed = 920,
+    rocket_radius = 3,
+    rocket_blast = 52,
+    rocket_damage = 58,
+    --- Fraction of world gravity applied each step (DESIGN: mild gravity on rocket trajectory)
+    rocket_gravity_mul = 0.2,
+    rocket_ray_steps = 56,
+    grenade_speed_mul = 1.15,
+    grenade_fuse = 4.0,
+    grenade_blast = 60,
+    grenade_damage = 52,
+    grenade_bounce = 0.55,
+    --- After a bounce, nudge out of terrain so the grenade doesn’t tunnel in solid cells
+    grenade_unstick_px = 3,
+  },
+  wind_force = { low = 28, med = 55, high = 95 },
+  colors = {
+    team1 = { 0.35, 0.75, 0.95 },
+    team2 = { 0.95, 0.45, 0.35 },
+    sky_top = { 0.12, 0.14, 0.22 },
+    sky_bot = { 0.35, 0.42, 0.55 },
+    dirt = { 0.45, 0.32, 0.22 },
+    dirt_dark = { 0.32, 0.22, 0.15 },
+    grass = { 0.28, 0.62, 0.35 },
+  },
+}

@@ -1,0 +1,18 @@
+local scores = require("data.session_scores")
+
+describe("data.session_scores", function()
+  before_each(function()
+    scores.reset()
+  end)
+
+  it("record_match_outcome increments wins and games_played", function()
+    scores.record_match_outcome(1)
+    scores.record_match_outcome(2)
+    scores.record_match_outcome(0)
+    local snap = scores.get_snapshot()
+    assert.are.equal(1, snap.gamesPlayedP1)
+    assert.are.equal(1, snap.gamesPlayedP2)
+    assert.are.equal(1, snap.gamesDrawn)
+    assert.are.equal(3, snap.games_played)
+  end)
+end)
