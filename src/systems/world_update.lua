@@ -34,6 +34,22 @@ function M.update_moles(ctx, dt)
   end
 end
 
+--- Projectile vs living mole capsule (circle); any team.
+local function living_mole_hit_at(teams, px, py, pr)
+  local all = roster.all_moles(teams)
+  for i = 1, #all do
+    local m = all[i]
+    if m.alive then
+      local dx, dy = px - m.x, py - m.y
+      local rr = pr + m.radius
+      if dx * dx + dy * dy <= rr * rr then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 local function step_rocket(ctx, p, dt)
   local terrain = ctx.terrain
   local def = p.def
@@ -47,6 +63,11 @@ local function step_rocket(ctx, p, dt)
     local ny = p.pos.y + p.vel.y * sub
     local r = def.hit_radius or 8
     if nx < -80 or nx > ctx.world_w + 80 or ny < -200 or ny > ctx.world_h + 200 then
+      p.dead = true
+      return
+    end
+    if living_mole_hit_at(ctx.teams, nx, ny, r) then
+      explosions.apply(ctx, nx, ny, def, p.owner_team)
       p.dead = true
       return
     end
@@ -99,7 +120,14 @@ function M.update_grenades(ctx, dt)
         explosions.apply(ctx, g.pos.x, g.pos.y, def, g.owner_team)
         table.remove(list, i)
       else
-        i = i + 1
+        local gr = g.def.hit_radius or 10
+        if living_mole_hit_at(ctx.teams, g.pos.x, g.pos.y, gr) then
+          local def = g.def
+          explosions.apply(ctx, g.pos.x, g.pos.y, def, g.owner_team)
+          table.remove(list, i)
+        else
+          i = i + 1
+        end
       end
     end
   end

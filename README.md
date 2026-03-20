@@ -24,6 +24,8 @@ Install LÖVE: [https://love2d.org/](https://love2d.org/)
 - **SFX:** synthesized at startup (`src/audio/sfx.lua`) — fire whoosh, grenade pop, explosion noise+thump, tiny UI blip.
 - **VFX:** explosion rings + sparks + muzzle puffs + rocket exhaust puffs, camera shake, match-end confetti on the **`game_over`** overlay (`match_end` only).
 - **Input:** smoothed left-stick aim in **`dual_gamepad`**, **LB/RB or analog triggers** to charge power, **Start** opens pause from **any** pad; dead moles during **aim** reassign the active slot or end the round if a team is wiped.
+- **`shared_kb` extras:** **mouse wheel** adjusts shot power during aim; **optional gamepads** follow the active player (P1 → first pad, P2 → second pad or the only pad on P2’s turn). See `CODING_NOTES.md`.
+- **Direct hits:** rockets (and grenades) **detonate on living mole overlap**, not only on terrain.
 
 ## Layout (src)
 

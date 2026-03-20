@@ -119,7 +119,7 @@ function M.draw(ctx)
   local scheme = cfg.input_scheme or "shared_kb"
   local hint
   if scheme == "shared_kb" then
-    hint = (ap == 1) and "P1: A/D move · W/S aim · Shift power · Space fire · 1/2 weapon · Mouse aim" or "P2: Arrows move/aim · RShift power · Enter fire · Pad Start pause"
+    hint = (ap == 1) and "P1: A/D move · W/S aim · Shift power · Mouse wheel power · Space fire · 1/2 weapon · Mouse aim · optional pad" or "P2: Arrows / optional 2nd (or shared) pad · RShift · Wheel power · Enter · Start pause"
   else
     hint = "Your turn: stick aim · A fire · LB/RB or triggers charge power · Start = pause (any pad)"
   end

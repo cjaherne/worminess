@@ -238,6 +238,26 @@ local function new(match_cfg)
     return bindings.p1_keys
   end
 
+  --- Hybrid: P1 uses first gamepad if present; P2 uses second pad or the only pad on their turn.
+  local function shared_kb_joy_for_turn(ts)
+    local pads = {}
+    for _, j in ipairs(love.joystick.getJoysticks()) do
+      if j:isGamepad() then
+        pads[#pads + 1] = j
+      end
+    end
+    if ts.active_player == 1 and #pads >= 1 then
+      return pads[1]
+    end
+    if ts.active_player == 2 and #pads >= 2 then
+      return pads[2]
+    end
+    if ts.active_player == 2 and #pads == 1 then
+      return pads[1]
+    end
+    return nil
+  end
+
   local function try_move(self, dir, dt)
     local ts = self.turn
     if ts.phase ~= turn_state.phases.aim then
@@ -279,11 +299,35 @@ local function new(match_cfg)
       if love.keyboard.isDown(b.aim_down) then
         ts.aim_angle = ts.aim_angle + 1.6 * dt
       end
-      if love.keyboard.isDown(b.power) then
+      local j = shared_kb_joy_for_turn(ts)
+      local shoulder, trig = false, 0
+      if j and j:isGamepad() then
+        local lx, ly = stick.read_left_stick(j, 0.28)
+        if math.abs(lx) > 0.02 then
+          try_move(self, lx > 0 and 1 or -1, dt * math.min(1, math.abs(lx) * 1.25))
+        end
+        if math.abs(lx) > 0.04 or math.abs(ly) > 0.04 then
+          self._aim_sx, self._aim_sy = stick.smooth2(self._aim_sx, self._aim_sy, lx, ly, dt, 18)
+          ts.aim_angle = math.atan2(self._aim_sy, self._aim_sx)
+        end
+        shoulder = j:isGamepadDown("leftshoulder") or j:isGamepadDown("rightshoulder")
+        trig = stick.read_triggers(j)
+      end
+      if love.keyboard.isDown(b.power) or shoulder or trig > 0.2 then
         ts.charging = true
       end
+      if j and j:isGamepad() then
+        local kb_on = love.keyboard.isDown(b.power)
+        if not kb_on and not shoulder and trig < 0.1 then
+          ts.charging = false
+        end
+      end
+      local boost = 1
+      if shoulder or trig > 0.2 then
+        boost = 1 + trig * 0.45
+      end
       if ts.charging then
-        ts.power = math.min(1, ts.power + C.POWER_CHARGE_RATE * dt)
+        ts.power = math.min(1, ts.power + C.POWER_CHARGE_RATE * dt * boost)
       end
     elseif scheme == "dual_gamepad" then
       local j = devices.joy_p1
@@ -423,7 +467,20 @@ local function new(match_cfg)
     local ts = self.turn
     local b = binding_for_active()
     if key == b.power then
-      ts.charging = false
+      if self.cfg.input_scheme == "shared_kb" then
+        local j = shared_kb_joy_for_turn(ts)
+        local pad_charging = false
+        if j and j:isGamepad() then
+          local shoulder = j:isGamepadDown("leftshoulder") or j:isGamepadDown("rightshoulder")
+          local trig = stick.read_triggers(j)
+          pad_charging = shoulder or trig > 0.2
+        end
+        if not pad_charging then
+          ts.charging = false
+        end
+      else
+        ts.charging = false
+      end
     end
   end
 
@@ -434,6 +491,12 @@ local function new(match_cfg)
     end
     if self.turn.phase ~= turn_state.phases.aim then
       return
+    end
+    if self.cfg.input_scheme == "shared_kb" then
+      local j = shared_kb_joy_for_turn(self.turn)
+      if j ~= joystick then
+        return
+      end
     end
     local slot = devices.slot_for_joystick(joystick)
     if self.cfg.input_scheme == "dual_gamepad" then
@@ -451,12 +514,29 @@ local function new(match_cfg)
   end
 
   function self:gamepadreleased(joystick, button)
+    if self.cfg.input_scheme == "shared_kb" then
+      local j = shared_kb_joy_for_turn(self.turn)
+      if j ~= joystick then
+        return
+      end
+    end
     local slot = devices.slot_for_joystick(joystick)
     if self.cfg.input_scheme == "dual_gamepad" and slot ~= self.turn.active_player then
       return
     end
     if button == "leftshoulder" or button == "rightshoulder" then
-      self.turn.charging = false
+      local ts = self.turn
+      if self.cfg.input_scheme == "shared_kb" then
+        local b = binding_for_active()
+        local kb_on = love.keyboard.isDown(b.power)
+        local trig = stick.read_triggers(joystick)
+        local sh = joystick:isGamepadDown("leftshoulder") or joystick:isGamepadDown("rightshoulder")
+        if not kb_on and trig < 0.1 and not sh then
+          ts.charging = false
+        end
+      elseif self.cfg.input_scheme == "dual_gamepad" then
+        ts.charging = false
+      end
     end
   end
 
@@ -474,6 +554,18 @@ local function new(match_cfg)
       return
     end
     weapons.try_fire(self:play_ctx())
+  end
+
+  function self:wheelmoved(_x, y)
+    if self.cfg.input_scheme ~= "shared_kb" then
+      return
+    end
+    if self.turn.phase ~= turn_state.phases.aim then
+      return
+    end
+    local ts = self.turn
+    local step = 0.12
+    ts.power = math.max(0, math.min(1, ts.power - y * step))
   end
 
   function self:draw()

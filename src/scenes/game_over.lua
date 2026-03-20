@@ -198,15 +198,25 @@ local function new(opts)
       love.graphics.printf(
         "Session match wins · P1: " .. tostring(s1) .. "   P2: " .. tostring(s2),
         340,
-        280,
+        272,
         600,
         "center",
         0,
         0.9,
         0.9
       )
+      love.graphics.printf(
+        "Matches completed (session): " .. tostring(self.session.matches_completed),
+        340,
+        300,
+        600,
+        "center",
+        0,
+        0.82,
+        0.82
+      )
       local labels = { "Rematch", "New setup", "Main menu" }
-      local bx, by, bw, bh, gap = 400, 330, 480, 44, 10
+      local bx, by, bw, bh, gap = 400, 352, 480, 44, 10
       for i = 1, #labels do
         local yy = by + (i - 1) * (bh + gap)
         local sel = (self.focus == i)
