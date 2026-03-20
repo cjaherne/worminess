@@ -2,7 +2,37 @@
 
 ## Summary
 
-Implementing sub-task 3: reading the design and current HUD, input, match setup, and rendering code to identify gaps and polish.
+Reading DESIGN.md, REQUIREMENTS.md, and scanning the codebase for `config.defaults` references.
+
+
+
+
+Creating `src/config/defaults.lua`, removing the old file, and updating references. Reading `TESTING.md`, `ASSETS.md`, and `CODING_NOTES.md`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Creating the nested module path, updating the spec helper and release check, and documenting REQUIREMENTS.md traceability in CODING_NOTES.md.
+
+
+
+
+Checking `path_join`: it only accepts three arguments; calls with four segments are incorrect.
+
+
+
+
+Fixing `path_join` usage: it accepts only three parameters, so four-argument calls dropped `defaults.lua`.
 
 
 
@@ -22,7 +52,6 @@ Implementing sub-task 3: reading the design and current HUD, input, match setup,
 
 
 
-Sub-task 3 is largely implemented. Adding a center HUD panel for team vitality (aggregate HP and living counts), a friendly-fire indicator, and wiring the weapon UI to `sim.weapons.registry` for consistency with `world.lua`.
 
 
 
@@ -37,40 +66,67 @@ Sub-task 3 is largely implemented. Adding a center HUD panel for team vitality (
 
 
 
-## Sub-task 3 status
 
-The game already met most of sub-task 3 (HUD, projectile/mole polish, shared KB+M, dual gamepads, mole health and other match options in **Match setup**). This pass **extends** that work and tightens consistency.
 
-### What I added or changed
 
-1. **`src/ui/hud.lua` — `draw_match_vitals`**
-   - Center column between weapon and wind: **Team A / Team B** with **aggregate HP bar**, **current HP vs full roster cap**, **living count**, the active **input mode** string, and **Friendly fire ON** when `friendly_fire` is enabled.
-   - Weapon panel now uses **`sim.weapons.registry`** (`W.rocket` / `W.grenade`) instead of raw `1` / `2`.
 
-2. **`src/scenes/play.lua`**
-   - Calls **`hud.draw_match_vitals`** during play so session-style scoring (top right) and **team-level health** (center) are both visible.
 
-3. **`src/render/mole_draw.lua`**
-   - Aim preview length/color uses the same **registry** as the sim/HUD.
 
-4. **`CODING_NOTES.md`** — Sub-task 3 section updated to describe the vitality panel, registry alignment, and match-setup coverage (R7/R9/R10/R11).
 
-5. **`README.md`** — HUD section updated for the center panel and help strip.
 
-### Verification
 
-- **`love .`** smoke run: OK.
-- **Lint:** no issues on edited files.
-- **R1–R11:** Still mapped in `CODING_NOTES.md`; R9 (mole health, etc.) remains in **`match_setup`** + **`match_settings`**; R10/R11 remain in **`input_manager`** + **`keyboard_mouse`** / **`gamepad`** + setup **Input** row.
 
-If you want the next iteration, a natural follow-up is a **numeric map-seed editor** on the seed row for gamepad-only users (called out in `CODING_NOTES` as keyboard-only today).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Here is what was wrong, what changed, and how it was checked.
+
+### Cause (R1)
+
+With `love.filesystem.setRequirePath("src/?.lua;…")`, `require("config.defaults")` resolves to **`src/config/defaults.lua`** (dots → path segments). A single file **`src/config.defaults.lua`** never matched that pattern, so the module looked “missing” even though the table existed.
+
+### Fix (R2)
+
+- **Added** `src/config/defaults.lua` (same `return { … }` as before).
+- **Removed** `src/config.defaults.lua`.
+- **`spec/spec_helper.lua`**: repo-root detection, `package.preload["config.defaults"]` `loadfile` target, and comments now use `src/config/defaults.lua`. `path_join` only takes three parameters, so paths are built as `path_join(path_join(root, "src", "config"), "defaults.lua")` (four-part paths were wrong before and would have truncated to `…/config` without `defaults.lua`).
+- **`tools/release-check.mjs`**: `src/config/defaults.lua` is in the `required` list so `npm run build` fails if it is missing.
+- **`TESTING.md`**, **`ASSETS.md`**: paths/wording updated.
+- **`CODING_NOTES.md`**: table for **REQUIREMENTS.md R1–R3** with traceability and R3 verification notes.
+- **`.pipeline/game-art.handoff.md`** and **`.pipeline/context-cache.json`**: file map entry updated for consistency.
+
+`require("config.defaults")` at call sites is unchanged, as in the design.
+
+### Verification (R3)
+
+- **`npm run build`** — succeeds (`release check ok`).
+- **Busted / `lua` on PATH** — not available here; **`CODING_NOTES.md`** records that. **`love.exe`** is at `C:\Program Files\LOVE\love.exe` for a local `love .` smoke test.
+
+Other `.pipeline/*.md` files still mention the old filename in historical snippets; the design called those optional and they are not required for the game or `npm run build`.
 
 ## Files Created/Modified
+- ASSETS.md
 - CODING_NOTES.md
-- README.md
-- src/render/mole_draw.lua
-- src/scenes/play.lua
-- src/ui/hud.lua
+- TESTING.md
+- spec/spec_helper.lua
+- src/config.defaults.lua
+- tools/release-check.mjs
 
 ## Shell Commands Run
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; $p = Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -PassThru -NoNewWindow; Start-Sleep -Seconds 2; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess" && npm run build`
+- `where lua 2>nul; where busted 2>nul; where love 2>nul`
+- `Set-Location "C:\Users\Chris\Documents\GitHub\worminess"; npm run build`
+- `Get-Command lua, busted, love -ErrorAction SilentlyContinue | Format-Table Name, Source -AutoSize`
+- `cmd /c "where lua 2>nul"`
