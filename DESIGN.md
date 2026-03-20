@@ -1,230 +1,353 @@
 ## Original task (source of truth)
 
-Plan and fix the broken build due to missing module 'config.defaults'.
+Plan and fix the broken build due to missing module `config.defaults` (pipeline slice). The shipped game **also** satisfies the broader “Moles” product scope documented in **[CODING_NOTES.md](./CODING_NOTES.md)** and **[README.md](./README.md)**.
 
 ---
 
-
 ## Requirements traceability
 
-Numbered requirements extracted from the user task: **[REQUIREMENTS.md](./REQUIREMENTS.md)**. Implementation must satisfy each item or document deferral in **CODING_NOTES.md**.
+**Pipeline slice (meta):** **[REQUIREMENTS.md](./REQUIREMENTS.md)** (R1–R3) — `config.defaults` identification, integration, build verification.
+
+**Product slice (R1–R11 narrative):** Use the **§15** table in this document for file-level mapping. Deviations, as-built notes, and suggestions already captured in **CODING_NOTES.md** must stay in sync when behavior changes.
 
 <!-- requirements-traceability-linked -->
 
 ---
 
+# DESIGN — Moles (LÖVE) + `config.defaults` integration
 
-# DESIGN — Fix `config.defaults` module resolution & release integration
+**Audience:** Coding Agent blueprint and human maintainers.
 
-**Scope:** This document is the normative blueprint for the Coding Agent task: restore a working runtime and test load path for the **`config.defaults`** Lua module, and align automated checks with the on-disk layout. It builds on the existing LÖVE 11.4 project (`main.lua` → `src/app.lua`, `love.filesystem.setRequirePath` in `main.lua`).
+**Runtime:** LÖVE **11.4** per `conf.lua`; **11.5** has been smoke-tested as API-compatible for this project.
 
-**Requirements:** Satisfy **[REQUIREMENTS.md](./REQUIREMENTS.md)** (R1–R3): identify why the module fails, implement the fix, verify the build/tests.
-
-**Related narrative docs:** Broader game/UX architecture remains in **[CODING_NOTES.md](./CODING_NOTES.md)**, **[README.md](./README.md)**, and **`.pipeline/*.md`** (optional doc sync when paths change).
+**Entry:** `main.lua` → `src/app.lua` (scene stack, letterboxed **1280×720**).
 
 ---
 
-## 1. High-level architecture and approach
+## 1. High-level architecture
 
-### 1.1 Symptom
+### 1.1 Layers
 
-At runtime under LÖVE, `require("config.defaults")` can fail with a missing-module error even when a Lua file containing the defaults **exists** under `src/`, because the **physical path does not match** how LÖVE resolves dotted module names.
+| Layer | Role | Key paths |
+|-------|------|-----------|
+| **Bootstrap** | `require` path, LÖVE callbacks | `main.lua`, `conf.lua` |
+| **App / scenes** | Stack, navigation, match lifecycle | `src/app.lua`, `src/scenes/*.lua` |
+| **Input** | Shared KB+M vs dual gamepad | `src/input/input_manager.lua`, `keyboard_mouse.lua`, `gamepad.lua`, `util/gamepad_menu.lua` |
+| **Simulation** | World, physics, terrain, damage, turns, weapons | `src/sim/*.lua`, `src/sim/weapons/*.lua` |
+| **Data** | Match options, session scores | `src/data/match_settings.lua`, `session_scores.lua` |
+| **Config** | Global tuning (physics, weapons, wind, colors) | `src/config/defaults.lua` (module name `config.defaults`) |
+| **Presentation** | Camera, draws, HUD, SFX | `src/render/*.lua`, `src/ui/hud.lua`, `src/audio/sfx.lua` |
 
-### 1.2 Root cause (normative)
+### 1.2 Session flow (scenes)
 
-`main.lua` configures the search path:
+`menu` → `match_setup` → `play` (with `pause` overlay) → `match_end` → (new setup or title). Match end records session scores via `data.session_scores`.
+
+### 1.3 Focus / audio
+
+`love.focus` → `app.focus`: mute `love.audio` when the window loses focus.
+
+---
+
+## 2. `config.defaults` — root cause, layout, and maintenance
+
+### 2.1 Status: **implemented**
+
+The module is **not** optional: sim, render, and HUD `require("config.defaults")`. The failure mode was **path mismatch**, not missing content.
+
+### 2.2 Root cause (normative)
 
 ```2:2:main.lua
 love.filesystem.setRequirePath("src/?.lua;src/?/init.lua;" .. love.filesystem.getRequirePath())
 ```
 
-Per LÖVE’s `require` behavior (see [LÖVE wiki: `require`](https://love2d.org/wiki/require)), **dots in the module name are turned into directory separators** when substituting `?`. Therefore:
+LÖVE’s `require` substitutes `?` after **mapping dots in the module name to directory separators**. Hence `require("config.defaults")` resolves to **`src/config/defaults.lua`**, not a flat `src/config.defaults.lua`.
 
-| Call | Resolved file (first matching template) |
-|------|----------------------------------------|
-| `require("config.defaults")` | `src/config/defaults.lua` |
-| `require("sim.world")` | `src/sim/world.lua` |
+### 2.3 As-built file layout
 
-A single file named **`src/config.defaults.lua`** (dot in the **filename**, not a `config/` directory) does **not** satisfy `require("config.defaults")` under those rules. The repo already uses nested layout everywhere else (`sim/world.lua`, `audio/sfx.lua`, etc.); **`config` was the inconsistent outlier**.
+| Path | Role |
+|------|------|
+| **`src/config/defaults.lua`** | Single source of truth for returned defaults table |
+| **`spec/spec_helper.lua`** | Repo root probing + `package.preload["config.defaults"]` / `package.path` for busted |
+| **`tools/release-check.mjs`** | **Required** list includes `src/config/defaults.lua` so `npm run build` fails if it disappears |
 
-### 1.3 Strategy
+**Do not** reintroduce `src/config.defaults.lua`. **Do not** rename the Lua module string at call sites; keep `require("config.defaults")`.
 
-1. **Relocate** the defaults table module from `src/config.defaults.lua` to **`src/config/defaults.lua`** (new directory `src/config/`).
-2. **Keep** every existing `require("config.defaults")` call site **unchanged** (e.g. `src/sim/world.lua`, `src/sim/mole.lua`, `src/ui/hud.lua`, weapons, terrain, render modules — already listed via repo search).
-3. **Update** test/bootstrap and release tooling that hard-code the old path string.
-4. **Optionally** simplify `spec/spec_helper.lua` after verification: once the path matches both LÖVE and CLI Lua, `package.preload["config.defaults"]` may become redundant; the minimal safe change is to **repointer** the preload `loadfile` path (see §8).
+### 2.4 Module contract (schema)
 
-No new third-party dependencies. No change to `package.json` scripts beyond what the Coding Agent needs for verification.
-
----
-
-## 2. File / directory structure (implementation)
-
-**Add**
-
-- `src/config/defaults.lua` — body moved from current `src/config.defaults.lua` (same `return { ... }` module shape).
-
-**Remove**
-
-- `src/config.defaults.lua` — delete after successful move (avoid duplicate sources of truth).
-
-**Do not add** unless you later introduce more `config.*` modules:
-
-- `src/config/init.lua` — not required for `require("config.defaults")`.
-
-**Unchanged (by default)**
-
-- `main.lua` — require path already correct once the file exists at `src/config/defaults.lua`.
-- All gameplay modules that already use `local defaults = require("config.defaults")`.
-
-**Modify**
-
-| File | Reason |
-|------|--------|
-| `spec/spec_helper.lua` | Repo root detection and `package.preload` / comments reference the old filename. |
-| `tools/release-check.mjs` | Include the new path in the required-files list so `npm run build` fails if the module is absent. |
-| `TESTING.md`, `ASSETS.md` | Human-facing paths mention `src/config.defaults.lua`; update to `src/config/defaults.lua`. |
-| `.pipeline/*.md`, `.pipeline/context-cache.json` | Optional consistency (not required for game to run). |
-
----
-
-## 3. Data model, interface, schema
-
-The module is a **plain Lua table** returned as the only export (functional core, no OOP).
-
-**Contract:** `require("config.defaults")` returns a table with at least the following **documented fields** (Coding Agent: preserve keys when moving; do not rename unless a follow-up task refactors all consumers):
+`require("config.defaults")` returns one table. Preserve existing keys when tuning; consumers include `world.lua`, `mole.lua`, `physics.lua`, `terrain.lua`, `terrain_gen.lua`, `sim/weapons/rocket.lua`, `grenade.lua`, `render/mole_draw.lua`, `terrain_draw.lua`, `ui/hud.lua`.
 
 ```lua
--- Pseudocode shape (normative keys; values are numbers/tables as today)
+-- Shape (pseudocode; numeric fields tuned in-repo)
 {
-  cell = number,
-  grid_w = number,
-  grid_h = number,
-  gravity = number,
-  mole_radius = number,
-  jump_speed = number,
-  walk_speed = number,
-  max_dt = number,
+  cell, grid_w, grid_h, gravity, mole_radius, jump_speed, walk_speed, max_dt,
   weapon = {
-    rocket_speed = number,
-    rocket_radius = number,
-    rocket_blast = number,
-    rocket_damage = number,
-    rocket_gravity_mul = number,
-    rocket_ray_steps = number,
-    grenade_speed_mul = number,
-    grenade_fuse = number,
-    grenade_blast = number,
-    grenade_damage = number,
-    grenade_bounce = number,
-    grenade_unstick_px = number,
+    rocket_speed, rocket_radius, rocket_blast, rocket_damage,
+    rocket_gravity_mul, rocket_ray_steps,
+    grenade_speed_mul, grenade_fuse, grenade_blast, grenade_damage,
+    grenade_bounce, grenade_unstick_px,
   },
-  wind_force = { low = number, med = number, high = number },
-  colors = {
-    team1 = { r, g, b },
-    team2 = { r, g, b },
-    sky_top = { r, g, b },
-    sky_bot = { r, g, b },
-    dirt = { r, g, b },
-    dirt_dark = { r, g, b },
-    grass = { r, g, b },
-  },
+  wind_force = { low, med, high },
+  colors = { team1, team2, sky_top, sky_bot, dirt, dirt_dark, grass },
 }
 ```
 
-**Consumers (reference only — no require string changes):** `src/sim/world.lua`, `mole.lua`, `physics.lua`, `terrain.lua`, `terrain_gen.lua`, `src/sim/weapons/rocket.lua`, `grenade.lua`, `src/render/mole_draw.lua`, `terrain_draw.lua`, `src/ui/hud.lua`.
+**Policy:** Match-specific toggles live in **`src/data/match_settings.lua`**. Do not stuff key-bind strings into `config.defaults` (physics / weapon numbers / palette only).
+
+### 2.5 Verification
+
+- `npm run build` → `tools/release-check.mjs` must list `src/config/defaults.lua`.
+- Manual: `love .` from repo root loads past first `require("config.defaults")`.
+- Optional: `busted` per **TESTING.md** (CLI Lua may differ from LÖVE; `spec_helper` bridges this).
 
 ---
 
-## 4. Component breakdown
+## 3. Turn model (players + mole slots)
 
-| Area | Responsibility |
-|------|----------------|
-| **`src/config/defaults.lua`** | Single source of truth for global tuning (grid, physics, weapons, wind magnitudes, palette). |
-| **`main.lua`** | Already prefixes `src/?.lua`; no code change expected after file move. |
-| **Sim / render / HUD** | Continue to `require("config.defaults")` and read fields; no architectural change. |
-| **`spec/spec_helper.lua`** | Ensures busted/CLI runs find `src/` and, until proven otherwise, can keep an explicit `loadfile` for `config.defaults` keyed to the **new** path. |
-| **`tools/release-check.mjs`** | Treat `src/config/defaults.lua` as a **ship gate** artifact alongside `main.lua`, `src/app.lua`, etc. |
+**Authoritative implementation:** `src/sim/turn_state.lua`.
 
----
+**Rules (normative prose):**
 
-## 5. Dependencies and technology choices
+1. **`end_turn` / `advance_after_turn`:** For the **current** `active_player` P, advance that player’s `mole_slot[P]` at least one step on the ring 1..5, then to the **next living** mole for P; then set `active_player` to the opponent.
+2. **`sync_slots_to_living`:** After damage/death, callers (e.g. `world.update`) must resync slots so the active slot never points at a dead mole mid-turn.
+3. **Timer:** If turn time limit &gt; 0, expiry calls `end_turn` (same path as manual end).
 
-- **LÖVE 11.4** (see `conf.lua`) — existing; no version change.
-- **Node.js** — existing; `npm run build` remains a file-presence gate (`tools/release-check.mjs`).
-- **Busted** — optional on developer machines; behavior defined in `TESTING.md` / `spec/spec_helper.lua`.
+```66:91:src/sim/turn_state.lua
+function M:advance_after_turn(moles)
+  local p = self.active_player
+  -- ... ring walk, pick next living slot for player p ...
+  self.active_player = (p == 1) and 2 or 1
+end
 
-**Rationale:** Fixing the path aligns with LÖVE’s documented `require` semantics and matches the rest of the tree (`sim.*`, `audio.*`, `util.*`), eliminating reliance on a misleading flat filename.
+function M:end_turn(moles, settings)
+  self._turn_limit = settings.turn_time_seconds or 0
+  self:advance_after_turn(moles)
+  self:sync_slots_to_living(moles)
+  self.turn_time_left = self._turn_limit
+end
+```
 
----
-
-## 6. Implementation notes for the Coding Agent
-
-### 6.1 Required steps (checklist)
-
-1. Create `src/config/` if missing.
-2. Move **`src/config.defaults.lua`** → **`src/config/defaults.lua`** (git-friendly: `git mv` if using git).
-3. Delete the old `src/config.defaults.lua` if anything remains.
-4. Update **`spec/spec_helper.lua`**:
-   - Every probe path and comment that mentions `src/config.defaults.lua` → **`src/config/defaults.lua`**.
-   - Set `config_defaults_path` (or equivalent) to the new location.
-   - Fix the misleading comment: LÖVE maps `config.defaults` → **`config/defaults.lua`**, not `config.defaults.lua`.
-5. Update **`tools/release-check.mjs`**: append `"src/config/defaults.lua"` to the `required` array.
-6. Update **`TESTING.md`** and **`ASSETS.md`** path strings so future agents don’t recreate the wrong file name.
-7. **Verify** (R3): `npm run build`; run `love .` from repo root and reach gameplay load (or at least past first `require("config.defaults")`); run `busted` if installed.
-
-### 6.2 Optional cleanup (after tests pass)
-
-- If `require("config.defaults")` resolves without `package.preload` when only `package.path` is prefixed with `src/?.lua`, consider **removing** `package.preload["config.defaults"]` from `spec_helper.lua` to reduce duplication. **Do not** remove it in the same commit as the move unless busted is run and green.
-
-### 6.3 Anti-patterns (do not do)
-
-- Do **not** rename the module to `require("config_defaults")` unless you are prepared to touch every call site for no benefit.
-- Do **not** keep two copies of the defaults table in different files.
-- Do **not** add implementation files other than the moved module and the listed edits (per task scope).
-
-### 6.4 Doc-only follow-ups
-
-Search for `config.defaults.lua` in **`.pipeline/`** and refresh to `src/config/defaults.lua` when convenient; this does not block the game build.
+**UX:** `play` shows a short **“Next: Player · Mole slot”** toast on turn handoff (not a separate `round_end` scene).
 
 ---
 
-## 7. Verification flow (mermaid)
+## 4. Weapons — full rocket and grenade (not stubs)
+
+| Weapon | Behavior | Tuning |
+|--------|----------|--------|
+| **Rocket** | Fast segment sweep, mild gravity via `rocket_gravity_mul`, impact detonation, terrain carve, damage, SFX | `config.defaults.weapon` + `world` integration |
+| **Grenade** | Arc, full gravity, timed **fuse**, bounce + `grenade_unstick_px`, explosion + terrain | Same |
+
+**Registry:** `src/sim/weapons/registry.lua` defines weapon ids/order; `world.weapon_index` and HUD stay aligned with **`rocket`** / **`grenade`** entries.
+
+**Wind:** `world` derives horizontal impulse from `match_settings.wind` and `config.defaults.wind_force`.
+
+---
+
+## 5. Input — normative as-built (resolves prior UX vs Designer drift)
+
+This section is the **single** normative control spec for shared keyboard and gamepad. **`README.md`** and HUD help text should match this; older pipeline UX docs that disagree are **superseded** here.
+
+### 5.1 Shared keyboard + mouse (`input_mode == "shared_kb"`)
+
+**Implementation:** `src/input/keyboard_mouse.lua`.
+
+**Rationale (from as-built):** Power uses **Z / X (P1)** and **I / K (P2)** instead of W/S vs Up/Down for power, to avoid clashes with **jump** and **menu navigation** on Up/Down.
+
+**Per-turn owner:** Only the **active** player’s row receives movement / jump / aim deltas from keys; **mouse aim and LMB fire** route to the turn owner via `world` / input manager (consume flags).
+
+| Player | Move L/R | Jump | Aim − / + | Power − / + | Cycle weapon | Fire | End turn |
+|--------|----------|------|-----------|-------------|--------------|------|----------|
+| **P1** (when active) | A / D | W or Space | Q / E | **Z / X** | Tab | F | G |
+| **P2** (when active) | Left / Right | Up or Right Shift | [ / ] | **K / I** | Minus or Equals | See §5.1.1 | Backspace or Backslash |
+
+**Weapon hotkeys (either player):** `1`/`2` → P1 weapon index; `,`/`.` → P2 weapon index (used when setting loadout / team weapon context — see code).
+
+#### 5.1.1 P2 fire keys (including Enter)
+
+P2 fire consumes on **`semicolon`**, **`rctrl`**, **`return`**, or **`kpenter`** (see `on_keypressed`).
+
+**Known issue:** If future in-match UI uses **Enter** to confirm dialogs, route those keys **before** `keyboard_mouse.on_keypressed` or **narrow** this binding so UI owns Enter.
+
+### 5.2 Dual gamepad (`input_mode == "dual_gamepad"`)
+
+**Implementation:** `src/input/gamepad.lua`. Joystick order: `love.joystick.getJoysticks()[1]` → P1, `[2]` → P2.
+
+| Control | Mapping |
+|---------|---------|
+| Move | Left stick X |
+| Jump | **A** |
+| Aim | Right stick → absolute aim angle when non-zero |
+| Power | **Right trigger − left trigger** (analog) |
+| Fire | **B** (edge-triggered via consume flag) |
+| End turn | **Y** |
+| Cycle weapon | **LB** or **RB** |
+
+**Note:** Some older UX text assumed **RT to fire**; as-built uses **B** for discrete fire and **triggers for power** only — reliable on common XInput layouts.
+
+### 5.3 Gamepad menus
+
+Scenes **`menu`**, **`match_setup`**, **`match_end`**, **`pause`**: `gamepadpressed` + `util/gamepad_menu.lua` (D-pad / left stick + cooldown). **A** ≈ confirm, **B** ≈ back. **Match end:** **X** = new setup. **Map seed** entry remains **keyboard**-oriented in setup.
+
+---
+
+## 6. Match setup and data models
+
+**UI:** `src/scenes/match_setup.lua` backed by **`src/data/match_settings.lua`**.
+
+**Typical options:** `mole_max_hp`, first player (P1 / P2 / random), friendly fire, turn time limit (or off), map seed (blank → random), wind (`off` / `low` / `med` / `high`), `input_mode` (`shared_kb` / `dual_gamepad`). Roster size **5 moles per team** is fixed for this build (read-only in UI).
+
+**Session scores:** `src/data/session_scores.lua` — wins per player and draws, **session only** (reset on quit); surfaced on menu, HUD, and match end.
+
+---
+
+## 7. HUD, polish, procedural audio
+
+**HUD** (`src/ui/hud.lua`): Turn banner (player, team label, active slot, HP, phase, optional timer); session score chips; team vitality (aggregate HP, cap, living count, input mode, friendly-fire flag); weapon panel (registry-driven, selected weapon, power bar, **live grenade fuse**); wind hint; roster S1–S5 with HP and active outline; help strip per input mode.
+
+**Visual polish:** Mole shadows, team ground ellipse, dim inactive team, active ring; rocket trail/glow; grenade fuse ring/spark/pulse and shadow; aim preview colors from weapon registry.
+
+**Audio:** No bundled `assets/audio/*` yet. **`src/audio/sfx.lua`** uses **procedural** beeps for fire, explosion, UI. Replace internals of `sfx.init()` / generators with WAV/OGG loading later **without changing call sites**.
+
+---
+
+## 8. Procedural terrain and combat loop
+
+- **Generation:** `src/sim/terrain_gen.lua` from `World.new` / `world.lua` using `map_seed` or random from settings.
+- **Destruction / damage:** `src/sim/terrain.lua`, `damage.lua`; explosions carve terrain and apply knockback/damage with friendly-fire rules from settings.
+
+---
+
+## 9. File / directory structure (reference)
+
+```
+main.lua, conf.lua
+src/app.lua
+src/config/defaults.lua
+src/audio/sfx.lua
+src/data/match_settings.lua, session_scores.lua
+src/input/input_manager.lua, keyboard_mouse.lua, gamepad.lua
+src/render/camera.lua, mole_draw.lua, terrain_draw.lua
+src/scenes/menu.lua, match_setup.lua, play.lua, pause.lua, match_end.lua
+src/sim/world.lua, mole.lua, physics.lua, terrain.lua, terrain_gen.lua,
+       damage.lua, turn_state.lua
+src/sim/weapons/registry.lua, rocket.lua, grenade.lua
+src/ui/hud.lua
+src/util/*.lua
+spec/*.lua, spec/spec_helper.lua
+tools/release-check.mjs, gen_sprites.mjs
+assets/sprites/*.png
+```
+
+New files should follow existing naming (`snake_case.lua`, `require` dotted paths mirroring folders under `src/`).
+
+---
+
+## 10. Dependencies and tooling
+
+| Tool | Role |
+|------|------|
+| **LÖVE 11.4+** | Game runtime |
+| **Node.js** | `npm run build` → file-presence gate |
+| **Busted** (optional) | Unit tests; see **TESTING.md** |
+
+---
+
+## 11. Component responsibilities (summary)
+
+| Component | Responsibility |
+|-----------|----------------|
+| `app.lua` | Scene stack, assets, fonts, global input, match quit → results |
+| `world.lua` | Match tick, projectiles, wind, weapon firing, turn sync after damage |
+| `turn_state.lua` | Turn timer, slot advancement, active mole resolution |
+| `input_manager.lua` | Mode dispatch, consume flags, joystick lifecycle |
+| `hud.lua` | All in-match overlays and help |
+| `config/defaults.lua` | Authoritative numeric/color tuning for sim + render |
+
+---
+
+## 12. Deviations (pipeline wording vs repo) — incorporated
+
+- **Rocket:** Full implementation (not a stub); **grenade** also complete (distinct trajectory, fuse, bounce).
+- **Shared keyboard / power keys:** Z/X vs I/K as in §5.
+- **Gamepad:** A jump, B fire, Y end turn, LB/RB cycle, triggers for power — §5.2.
+- **Audio:** Procedural SFX until real clips exist — §7.
+
+---
+
+## 13. Follow-up suggestions (non-blocking)
+
+- Optional dedicated **`round_end`** scene (1–2 s) in addition to turn toast.
+- Load **`assets/audio/*`** when available; keep procedural fallback.
+- Extract **`keymaps_shared.lua`** (+ optional rebinding UI).
+- Optional **RT-edge fire** on gamepad once input buffering is unified.
+- Terrain **canvas cache** if fill-rate becomes an issue.
+
+---
+
+## 14. Implementation notes for the Coding Agent
+
+1. **Never** place defaults at `src/config.defaults.lua` — breaks LÖVE resolution.
+2. After editing tuning, run **`npm run build`**; keep **`tools/release-check.mjs`** in sync if you add new hard dependencies.
+3. When changing **controls**, update **`keyboard_mouse.lua` / `gamepad.lua`**, **HUD help**, and **`README.md`** together; treat **§5** as normative.
+4. When adding **in-match UI** that uses **Enter**, audit **§5.1.1** conflict with P2 fire.
+5. Turn logic changes must preserve **`advance_after_turn`** + **`sync_slots_to_living`** invariants (see §3).
+6. New weapons: extend **`sim/weapons`**, **`registry`**, `world`, HUD, and **`config.defaults.weapon`** in one pass.
+
+---
+
+## 15. Requirements traceability tables
+
+### 15.1 Pipeline slice — **[REQUIREMENTS.md](./REQUIREMENTS.md)**
+
+| ID | Requirement | Status / pointer |
+|----|-------------|------------------|
+| R1 | Identify missing `config.defaults` | §2 root cause |
+| R2 | Integrate module into build/layout | §2.3–2.4 implemented |
+| R3 | Verify build | §2.5 + `release-check.mjs` |
+
+### 15.2 Product slice (narrative R1–R11)
+
+| ID | Topic | Primary implementation |
+|----|-------|------------------------|
+| R1 | Presentation / style | HUD, mole/projectile polish, `render/*`, procedural SFX |
+| R2 | Rocket | `src/sim/weapons/rocket.lua` + `world.lua` |
+| R3 | Grenade | `src/sim/weapons/grenade.lua` + fuse HUD |
+| R4 | 2P local | `play.lua`, two teams, hotseat |
+| R5 | Procedural maps | `terrain_gen.lua`, seed from `match_settings` |
+| R6 | Session scores | `session_scores.lua`, menu / HUD / match end |
+| R7 | Five moles / team | `World.new` / `mole.spawn_team` |
+| R8 | Rotate turns / moles | `turn_state.lua` (§3) |
+| R9 | Match variables | `match_setup.lua`, `match_settings.lua` |
+| R10 | Shared KB+M | `keyboard_mouse.lua` (§5.1) |
+| R11 | Dual gamepad | `gamepad.lua` (§5.2) + setup warnings if &lt;2 pads |
+
+---
+
+## 16. Verification flow (`config.defaults` + ship gate)
 
 ```mermaid
 flowchart LR
-  subgraph love [LÖVE runtime]
+  subgraph love [LÖVE]
     M[main.lua setRequirePath]
     R[require config.defaults]
     F[src/config/defaults.lua]
     M --> R --> F
   end
-  subgraph cli [Busted / CLI Lua]
-    S[spec_helper.lua sets path / preload]
-    R2[require config.defaults]
-    F2[src/config/defaults.lua]
-    S --> R2 --> F2
-  end
   subgraph gate [npm run build]
     RC[release-check.mjs]
-    RC -->|exists| F
+    RC --> F
+  end
+  subgraph tests [Optional]
+    SH[spec_helper.lua]
+    B[busted]
+    SH --> B
   end
 ```
 
 ---
 
-## 8. Success criteria
+## 17. Success criteria (config slice)
 
-- `require("config.defaults")` succeeds under LÖVE with **only** `src/config/defaults.lua` present (no `src/config.defaults.lua`).
-- `npm run build` passes and **fails** if `src/config/defaults.lua` is deleted.
-- Spec helper resolves repo root using the new sentinel path; busted specs that load sim modules still run when busted is available.
-
----
-
-## 9. Requirements traceability
-
-| ID | Requirement | Design coverage |
-|----|-------------|-----------------|
-| R1 | Identify missing `config.defaults` in the build | §1.2 root cause (path vs. LÖVE `require` rules) |
-| R2 | Implement changes to include `config.defaults` | §1.3 strategy, §2 structure, §6.1 checklist |
-| R3 | Test build after fix | §6.1 step 7, §8 success criteria |
+- `require("config.defaults")` loads **`src/config/defaults.lua`** only.
+- `npm run build` passes; deleting `src/config/defaults.lua` fails the release check.
+- No duplicate defaults sources; call sites unchanged (`require("config.defaults")`).
