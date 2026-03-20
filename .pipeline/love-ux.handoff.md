@@ -2,7 +2,7 @@
 
 ## Summary
 
-Reading the codebase and existing UX design to update `.pipeline/love-ux-design.md` so it aligns with implemented data modules and `conf.lua`.
+Reviewing `.pipeline/love-ux-design.md` and key sim modules so we can produce a complete, self-contained UX spec in `.pipeline/love-ux-design.md` (per pipeline rules we won't edit `DESIGN.md`).
 
 
 
@@ -12,6 +12,7 @@ Reading the codebase and existing UX design to update `.pipeline/love-ux-design.
 
 
 
+Updating `.pipeline/love-ux-design.md`: fixing paths (`src/config.defaults.lua`), aligning the turn/HUD contract with `src/sim/turn_state.lua`, enriching wireframes with element inventories, expanding flows (pause/forfeit/rematch) and menu navigation, and adding a merge appendix for `DESIGN.md`.
 
 
 
@@ -21,27 +22,23 @@ Reading the codebase and existing UX design to update `.pipeline/love-ux-design.
 
 
 
+## Update complete
 
-Updating `.pipeline/love-ux-design.md` to align with `conf.lua`, `src/data/match_settings.lua`, `src/data/session_scores.lua`, `src/config/defaults.lua`, and the architect’s scene names (`MainMenu`, `MatchSetup`, `Play`, etc.).
+Per pipeline rules, only **`.pipeline/love-ux-design.md`** was changed (not root `DESIGN.md`). The UX spec is expanded so an orchestrator can paste it into `DESIGN.md` **without losing content**.
 
+### Changes
 
+- **§0 — Repo alignment:** Uses **`src/config.defaults.lua`** (not `config/defaults.lua`); adds **`src/sim/turn_state.lua`**, **`terrain_gen.lua`**, and brief UX notes for **`terrain` / `damage` / `physics`**.
+- **§1.3 — `TurnView`:** Matches **`turn_state`** (`active_player`, `mole_slot`, `turn_time_left`, phases); **`CombatHudView`** mentions live grenade fuse vs **`weapon.grenade_fuse`** from defaults.
+- **§3 — Wireframes:** **Element inventories** under title, setup, and gameplay HUD so layouts are explicit.
+- **§4 — Flows:** Turn timer behavior, **pause**, **forfeit + confirm**, **rematch / new setup / title**, dual-pad warning, and a **mermaid** state diagram.
+- **§5 — Input:** **§5.5** menu/setup gamepad navigation (confirm/back, defaults).
+- **§6 — Accessibility:** Slightly expanded in-world / optional damage numbers note.
+- **§8 — Components:** Adds **`TurnTimerReadout`**, **`WindReadout`**, **`ConfirmDialog`**, **`LoadingBanner`**.
+- **§10:** Correct **`require("config.defaults")`** for team colors.
+- **§13 — Merge checklist:** Tells the orchestrator exactly which sections must land in **`DESIGN.md`** so the merged doc stays **self-contained** (addresses overseer feedback without editing `DESIGN.md` from this agent).
 
-
-## Done
-
-**Updated:** `.pipeline/love-ux-design.md` so the UX spec matches the **current repo** and stays merge-ready for root `DESIGN.md`.
-
-**What changed**
-
-- **§0 Codebase baseline** — Ties UX to `conf.lua` (1280×720, min 960×540, 11.4), `main.lua` → future `src/app.lua`, and the real modules **`src/data/match_settings.lua`**, **`src/data/session_scores.lua`**, **`src/config/defaults.lua`**, with pseudocode for `merge_partial` / `get_snapshot` / `record_match_outcome`.
-- **Scene mapping** — UX ids mapped to architect names (`MainMenu`, `MatchSetup`, `Play`, `Pause`, `RoundEnd`, `MatchEnd`) and suggested `src/scenes/*.lua` paths.
-- **Data alignment** — Match setup controls match **validated** fields: `mole_max_hp`, `first_player`, `friendly_fire`, `turn_time_seconds`, `map_seed`, `input_mode` (`shared_kb` / `dual_gamepad`), `wind`, fixed **5** moles; session HUD uses **`get_snapshot()`** keys (`gamesPlayedP1`, etc.).
-- **Team chrome** — HUD must use **`defaults.colors.team1` / `team2`**.
-- **§3.2** — Expanded match-variables table; **`input_mode`** copy for shared KB vs dual pads.
-- **§7 / §8 / §10** — File tree and components reference **existing** `src/` layout and “no duplicate validation” rule.
-- **§11 JSON** — Full wireframe regions (title, setup, gameplay HUD, **pause modal**, results), flows including **pause**, plus `dataModuleFields` for orchestrator merge.
-
-No implementation files (`.lua` gameplay/UI) were added—only this design doc.
+Opening note now states that **§2–§8**, **§11**, and **§12** are the primary block to merge under something like **`## LÖVE UX — Screens, HUD, flows, and input`**.
 
 ## Files Created/Modified
 - .pipeline/love-ux-design.md
