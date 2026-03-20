@@ -155,7 +155,7 @@ Edit in **`match_setup`**; always run **`match_config.validate(c)`** before **`p
 | `menuOwner` | While in menus, default **keyboard** + **joystick 1** move focus; **joystick 2** optional for **Ready** only in **match_setup** |
 | `input_scheme` | `match_config.input_scheme` — **`play`** scene routes KB/Mouse to **active_player** when `shared_kb`; maps **joystick id** to player when `dual_gamepad` |
 
-When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_setup` **except** dual-ready inputs (**§5.3** below; also **`DESIGN.md` — requirementsChecklist — UX**).
+When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_setup` **except** dual-ready inputs (**§5.3**; **`DESIGN.md` — requirementsChecklist — UX**).
 
 ---
 
@@ -163,13 +163,12 @@ When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_
 
 | Component | Responsibility |
 |-----------|----------------|
-| `layout` | Exposes `getSafeRect()`, `anchorTopLeft(w,h, margin)`, split regions for future split-screen **if** camera splits; v1 may be single shared world view with turn-based camera follow — HUD still uses full width. |
-| `theme` | Semantic palette: background `#1a1423`, paper `#f4ede0`, ink `#2b1f33`, team A `#6cb5c8`, team B `#e8a23c`, accent `#c44dff`, danger `#e24a4a`. WCAG-style contrast for **large text** on panels. |
-| `widgets.*` | Draw + hit-test + **focus** state; emit `onConfirm`, `onCancel`, `onValueChange`. |
-| `focus_stack` | Manages ordered focusable list, wrap at edges, visual focus ring `2px` offset, `accent` color. |
-| `compose/*` | Full-screen / overlay **views** invoked from `src/scenes/*`; no gameplay rules. |
-| `hud/play_hud` | Non-modal layer: turn strip, weapon icons, wind, move budget, compact score/session chip, crosshair-adjacent hints (if mouse player). |
-| `hud/toast` | Queue of short-lived banners (1.2–2.0s) for turn changes and round rotation text. |
+| **`ui/theme`** | Palette (`void`, `paper`, `ink`, `team_a` / `team_b`, `accent`, `danger`), **`begin_draw` / `end_draw`** scale, **`clear_void`**, **`load_fonts`** (body 22, HUD 28). |
+| **`ui/layout`** | **`safe_x0`**, **`safe_x1`**, **`screen_to_logical`** for hit-testing under scale. |
+| **`ui/focus_stack`** | Menu / overlay focus order (**`main_menu`**, **`match_setup`**, **`pause`**, **`game_over`**). |
+| **`ui/hud/play_hud`** | All **§5.4** clusters in one draw pass; interstitial band when `phase == interstitial` + `ctx.toast_text`; hint line reflects **`input_scheme`** (see **`README.md`** / implemented strings). |
+| **`widgets.*`**, **`compose/*`** | *Not present yet* — scenes draw imperatively; extract if duplication hurts readability. |
+| **`scenes/*`** | Stack entries; **`play`** builds **`ctx`** for **`play_hud`**. |
 
 ---
 
@@ -193,7 +192,7 @@ When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_
 
 ### 5.3 `match_setup`
 
-**Merged summary:** **`DESIGN.md` — `match_setup` (dual column)**. **This subsection** is the **pixel-accurate** expansion.
+**Merged summary:** **`DESIGN.md` — UX — §5.3 `match_setup`**. **This subsection** is the **pixel-accurate** expansion (**`src/scenes/match_setup.lua`**).
 
 Two-column form inside panel `x: 120–1160`, `y: 100–620`.
 
@@ -213,22 +212,23 @@ Two-column form inside panel `x: 120–1160`, `y: 100–620`.
 
 ### 5.4 `play` HUD (single shared view — v1)
 
-Scene name **`play`** (not `playing`). Assume **one** world camera (no per-player split) unless architect mandates split-screen later.
+Scene **`src/scenes/play.lua`**; HUD **`src/ui/hud/play_hud.lua`** (authoritative coordinates below). World draws under UI per scene order.
 
-| Cluster | Anchor | Size / notes |
-|---------|--------|----------------|
-| **Turn banner** | top center | `w: 560`, `h: 64`, `y: 16`, centered — “Player **N** · Mole **slot**” from `active_player` + `active_mole_slot` + team color bar `8px` |
-| **Scores** | top corners | P1: `x: 24`, `y: 24`; P2: right-aligned `x: 1256`, `y: 24`. Show **match** round wins if available; else session-only in chip |
-| **Session chip** | below score or `y: 72` | “Session **a–b**” optional; else **pause** only |
-| **Phase / interstitial** | overlay | When `turn_state.phase` is `interstitial` or `round_end`, reuse **toast** region (§5.6) without leaving **`play`** |
-| **Move budget** | near mole or bottom | Bar for `move_budget` vs `MOVE_BUDGET_MAX` |
-| **Weapon strip** | bottom center | `y: 656`, icons `64×64`, gap `16`; highlight `current_weapon_id` |
-| **Wind** | top center `y: 88` | From `match_config.wind_strength` |
-| **Power / charge** | bottom | Visible when `charging` or `phase == aim`; binds to `power` |
-| **Grenade fuse** | near active mole or weapon strip | When grenade entity armed / in flight (entity state), not only static config |
-| **Help hints** | bottom corners | `y: 600–680`: swap legend when **`active_player`** changes |
+| Cluster | As implemented (`play_hud.lua`) | Notes |
+|---------|----------------------------------|--------|
+| **Round wins (this match)** | P1: `x=24,y=20` width 440 left; P2: `x=lw-464,y=20` width 440 right | Team colours; **`ctx.round_wins`** — not session (**`DESIGN.md` — Session stats definition**) |
+| **Turn banner** | Paper rect `lw*0.5-280, 16, 560, 56` (radius 8) | Text: `RoundIndex · PN · Mole M · phase` (`interstitial` shown as “round start”) |
+| **Session match wins** | Centered `y=78`, width 400 | Copy: “Session match wins  a — b” from **`session:get_scores()`** |
+| **Wind** | Centered `y=100`, width 320 | “Wind: calm” or `→ / ←` + magnitude |
+| **Turn timer** | `y=120`, right block | If **`turn.turn_time_left`** set |
+| **Interstitial toast** | Full width `y=200`, height `120`, dim `α=0.45` | **`ctx.toast_text`**, only when `phase == interstitial` (see §5.6) |
+| **Move budget** | Label `x=48,y=620`; bar `48,642` size `200×12` | Fills by `move_budget / MOVE_BUDGET_MAX` |
+| **Power** | Label center `y=620`; bar center `x=lw/2-100`, `y=642`, `200×12` | Only when `phase == aim` |
+| **Weapon strip** | `y=656`, start `x=48`, each slot `64×64`, gap `16` | Names from **`data.weapons`**; accent outline when selected |
+| **Grenade fuse** | `y=wy+8` of weapon row, right block width 240 | First active grenade with `fuse > 0` |
+| **Control hints** | Centered `y=568`, width `lw-48`, scale `0.68` | **`input_scheme`**-specific strings (see §6.2) |
 
-**Mouse-specific:** when **`input_scheme == shared_kb`** and **`active_player`** uses mouse, show **cursor** + aim line; keep HUD `y ≥ 600` where possible for low-angle shots.
+**Mouse / aim:** gameplay draws cursor/reticle; HUD keeps dense chrome **≥ ~600** where possible for low shots. **`layout.screen_to_logical`** for any future clickable HUD.
 
 ### 5.5 `pause`
 
@@ -243,9 +243,9 @@ Scene name **`play`** (not `playing`). Assume **one** world camera (no per-playe
 
 ### 5.6 `round_interstitial` (lightweight)
 
-- Full-width **toast** at `y: 200`, `h: 120`, semi-transparent panel
-- Copy pattern: “Round 4 — **Player 1 · Mole 2**”
-- Auto-dismiss `1.5s` or on any `Confirm` input
+- **Implemented** inside **`play_hud`**: full-width band `y: 200`, `h: 120` when **`turn_state.phase == interstitial`** and **`ctx.toast_text`** is non-empty.
+- Copy is **game-driven** (round start, new map, etc.); align wording with **`DESIGN.md` — Map regeneration cadence** so players expect **fresh terrain each round** by default.
+- Dismissal / duration: **game logic** (not HUD); optional **Confirm** skip if designer adds it.
 
 ### 5.7 `game_over` (replaces UX label `match_summary`)
 
@@ -273,12 +273,16 @@ Single scene with **variants**:
 
 ### 6.2 Gameplay layer (hot-seat keyboard+mouse)
 
-**Binding source of truth:** **`DESIGN.md` — Mechanics (summary) → Controls** and `src/input/bindings.lua` once implemented. HUD hints must **track `turn_state.active_player`** and the active **input_scheme**.
+**Binding source of truth:** **`DESIGN.md` — Mechanics (summary) → Controls**, **`src/input/bindings.lua`**, and **`README.md`** (wheel power, optional pads). HUD hint strings are **hard-coded** in **`play_hud.lua`** today—**keep them in sync** when bindings change.
 
-Document in-options / loading screen; HUD shows a **short subset** only:
+**Implemented hint patterns (`shared_kb`):**
 
-- **Example (from merged DESIGN — adjust if bindings table differs):** P1 — `A`/`D` move, `W`/`S` aim, hold `Shift` for power, `Space` fire, `1`/`2` weapons; P2 — non-overlapping set (e.g. numpad / arrows) per bindings.
-- **Mouse:** aim + fire for **active** player only when scheme allows (**`DESIGN.md` — Input routing**).
+- **P1:** `A/D` move · `W/S` aim · `Shift` power · **Mouse wheel** power · `Space` fire · `1/2` weapon · mouse aim · optional pad  
+- **P2:** Arrows / optional 2nd (or shared) pad · `RShift` · wheel · `Enter` · Start pause  
+
+**`dual_gamepad`:** “stick aim · A fire · LB/RB or triggers charge · Start = pause (any pad)”.
+
+Document the full table in-options or **`CODING_NOTES.md`**; **`play_hud`** should only show the **one-line** summary.
 
 ### 6.3 Gameplay layer (dual controllers)
 
@@ -310,14 +314,14 @@ Document in-options / loading screen; HUD shows a **short subset** only:
 
 ## 9. Implementation notes for Coding Agent
 
-1. **Single source of truth:** HUD reads **`turn_state`**, **`match_config`**, **`session`**, and **`roster`** / active **mole** entity — never duplicate turn resolution in UI.
-2. **Toast queue:** re-entrant safe; serialize when `phase` flips and round events fire in the same frame.
-3. **Resolution:** implement `push`-style transform or equivalent: uniform scale + letterbox bars (`theme.void`); respect **`conf.lua`** min window size.
-4. **Focus:** on resize / gamepad hot-plug, reassert default focus on the active scene (`main_menu`, `match_setup`, `pause`, `game_over`).
-5. **Session scores:** call **`session:bump_match_win(player_index)`** only when game rules declare **match** finished (typically from **`game_over` match_end** path or turn resolver), not when exiting **`play`** mid-match.
-6. **Weapon UX:** rocket vs grenade — grenade shows **fuse** + arc expectation; strip always reserves slot for both **`weapons`** entries in `turn_state`.
-7. **Scene filenames:** use **`src/scenes/play.lua`**, **`game_over.lua`**, etc., per **love-architect**; UX compose modules under **`src/ui/`** only.
-8. **`main.lua`** expects **`app.register()`** — wire **`SceneManager`** there; first push **`boot`** or **`main_menu`** per architect merge.
+1. **Single source of truth:** HUD **`ctx`** is assembled in **`scenes/play`** from **`turn_state`**, **`match_config`**, **`session`**, **`round_wins`**, **`grenades`**, etc.—do not fork parallel HUD state.
+2. **Interstitial / toast:** set **`ctx.toast_text`** when entering **`interstitial`**; clear when advancing phase; safe if multiple events coalesce in one frame (pick one message or queue in scene).
+3. **Scaling:** already in **`theme.begin_draw` / `end_draw`** — new UI must draw **inside** that transform or multiply by the same scale math explicitly.
+4. **Pointer input:** use **`layout.screen_to_logical`** for menu hit tests when window is not 1:1 with logical size.
+5. **Session bump:** **`session:bump_match_win`** only on **match** end (**`DESIGN.md` — Session stats definition**), not on round end.
+6. **Labels:** never show **`session.scores`** as “round wins”; use **`round_wins`** (or equivalent) for in-match HUD (**`play_hud`** already separates copy).
+7. **New map each round:** UI should not imply terrain persists across rounds unless mechanics change (**`DESIGN.md` — Map regeneration cadence**).
+8. **Hints:** editing **`bindings.lua`** requires a pass on **`play_hud`** hint strings and **`README.md`**.
 
 ---
 
@@ -331,8 +335,9 @@ Document in-options / loading screen; HUD shows a **short subset** only:
       "boot: load fonts/audio/ui atlas → push main_menu (title splash optional inside boot)",
       "main_menu: Local match → match_setup",
       "match_setup: edit match_config fields + input_scheme; dual Ready; validate → push play",
-      "play: gameplay + play_hud; phase interstitial/round_end shows toast without popping scene",
-      "play: round complete → game_over variant round_end → play (or regenerate map per rules)",
+      "play: gameplay + play_hud; interstitial toast on play stack (phase interstitial + toast_text)",
+      "round setup: regenerate terrain per DESIGN.md Map regeneration cadence before placing moles",
+      "play: round complete → game_over variant round_end → play (new round / new map)",
       "play: match complete → game_over variant match_end → bump session → Rematch/New setup/Main menu",
       "any: Esc / Start → pause overlay on play (and optionally menus) → Resume / Restart / match_setup / main_menu"
     ],
@@ -369,8 +374,9 @@ Document in-options / loading screen; HUD shows a **short subset** only:
   },
   "recommendations": [
     "v1: skip heavy character creator; display mole slot index + team color from roster",
-    "Parallax optional on main_menu art pane",
-    "Playtest: bottom HUD y vs low-angle aim; tune weapon strip position"
+    "Optional toast line when new round map finishes generating (Map regeneration cadence)",
+    "Playtest: hint line y=568 vs projectiles; tune weapon row wy=656",
+    "Extract widgets/compose if match_setup drawing grows past maintainability"
   ]
 }
 ```
@@ -385,4 +391,4 @@ Document in-options / loading screen; HUD shows a **short subset** only:
 
 ---
 
-*End of love-ux design — implementation deliberately omitted per pipeline role.*
+*End of love-ux design — specification only; repository may already contain matching implementation (`src/ui/*`, `src/scenes/*`).*
