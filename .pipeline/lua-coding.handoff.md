@@ -2,7 +2,7 @@
 
 ## Summary
 
-Checking the codebase against sub-task 1 (entry, conf, scene manager, boot → main_menu → match_setup).
+Reading DESIGN.md and auditing gameplay systems against sub-task 2 requirements.
 
 
 
@@ -12,31 +12,72 @@ Checking the codebase against sub-task 1 (entry, conf, scene manager, boot → m
 
 
 
-Confirming the repo satisfies sub-task 1: `main.lua` → `app.register()` sets `love.load`/`love.update`/`love.draw`; `conf.lua` and `scene_manager.lua` are present; flow is boot → main_menu → match_setup. Updating the stale comment in `main_menu.lua` and verifying `match_setup` → `main_menu` back navigation.
 
 
 
 
-Here’s where things stand for **sub-task 1 (core structure + boot → main_menu → match_setup)**.
 
-### Already in place
-- **`main.lua`** — Extends `package.path`, loads `bootstrap` and `app`, calls `app.register()` so LÖVE callbacks are wired.
-- **`conf.lua`** — Window, joystick, `t.version = "11.4"`.
-- **`src/scene_manager.lua`** — Stack with `push` / `pop` / `replace`, top-only `update`, bottom→top `draw`, input forwarding (including `wheelmoved`).
-- **`src/app.lua`** — Starts in **`scenes.boot`**, which hands off to **`main_menu`**; **`main_menu`** “Local match” **`replace`s `match_setup`**; **`match_setup`** can go back to **`main_menu`** (Esc / Back) and forward to **`play`** when both players are ready.
 
-So the required scene transitions for this sub-task are already implemented; nothing structural was missing.
 
-### Change made
-- **`src/scenes/main_menu.lua`** — Header comment was still saying “→ play (stub)”; it now correctly says **→ match_setup**.
 
-### Check
-- A short **`love .`** run completed without an immediate crash (LOVE path used: `C:\Program Files\LOVE\love.exe`).
 
-**Sub-task 1 is done.** If the pipeline moves to sub-task 2/3, say what those ask for and we can align the next edits to that scope only.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Identifying a critical bug: `turn_resolver.resolve_flying_end` expects `ctx.team_turn_slot`, but `play_ctx()` omits it — causing a crash when a turn ends after projectiles settle. Adding `team_turn_slot` to `play_ctx()` and running a quick smoke test.
+
+
+
+
+
+
+
+
+
+## Sub-task 2 status
+
+Gameplay for this slice was already wired: **`play.lua`** (rounds, `map_seed.derive` + **`mapgen.generate`**, mole order rotation, alternating **`starting_player`**), **`turn_state`**, **`world_update`** (rockets/grenades, **direct mole hits**), **`weapons`**, **`explosions`**, **`turn_resolver`**, **`roster`** (5 moles, **`rotate_order`**), **`session`** (match wins + **`matches_completed`**), and **`input/*`**.
+
+### Bug fix (turn advance)
+
+**`turn_resolver.resolve_flying_end`** updates **`ctx.team_turn_slot`** and passes it into **`turn_state.advance_turn`**, but **`play_ctx()`** never exposed **`team_turn_slot`**. After a shot resolved, Lua would hit **“attempt to index a nil value”** when advancing the turn.
+
+**Change:** include **`team_turn_slot = self.team_turn_slot`** in the table returned by **`play_ctx()`** in ```46:59:src/scenes/play.lua``` so turn progression and per-team mole rotation stay consistent with the design.
+
+### Self-check vs **Original task**
+
+| Requirement | Where it lives |
+|-------------|----------------|
+| Core artillery (aim, power, flight, terrain, blasts) | `play.lua`, `world_update`, `explosions`, `weapons` |
+| Rocket + grenade | `data/weapons.lua`, `entities/*`, `world_update` |
+| 2-player local | `match_config.input_scheme`, `play`, `devices` |
+| Procedural maps, **per round** | `map_seed.lua`, `world/mapgen/init.lua`, `play:begin_round` |
+| Scores since launch (match wins) | `session.lua`, HUD / menus |
+| 5 moles / team | `MOLES_PER_TEAM`, `roster.new_team` |
+| Rotate players each round | `starting_player = ((round_index - 1) % 2) + 1` |
+| Rotate moles each round | `roster.rotate_order` in `begin_round` |
+| Match vars (e.g. HP) | `match_config`, `match_setup` |
+| KB+mouse and/or pads | `bindings`, `devices`, `play` input handlers |
+
+**`main.lua`** still registers **`love.load` / `love.update` / `love.draw`** via **`app.register()`** (not duplicated in `main.lua` itself).
+
+A short **`love .`** run completed without an immediate crash after the fix.
 
 ## Files Created/Modified
-- src/scenes/main_menu.lua
+- src/scenes/play.lua
 
 ## Shell Commands Run
-- `cd "C:\Users\Chris\Documents\GitHub\worminess"; $p = Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -PassThru -WindowStyle Hidden; Start-Sleep -Seconds 2; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }`
+- `cd "C:\Users\Chris\Documents\GitHub\worminess"; if (Test-Path "C:\Program Files\LOVE\love.exe") { $p = Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -PassThru -WindowStyle Hidden; Start-Sleep -Seconds 2; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue }; exit 0 } else { Write-Host "LOVE not installed at default path"; exit 0 }`
