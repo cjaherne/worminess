@@ -2,7 +2,7 @@
 
 Local 2-player **Worms**-style artillery game (moles theme). Built for **LÖVE 11.4** (works with 11.x).
 
-**Version** is tracked in `package.json` (SemVer) for releases and git tags (`v0.1.0`, …).
+**Version** is tracked in `package.json` (SemVer) for releases and git tags (`v0.1.1`, …).
 
 ## Features
 
@@ -33,7 +33,7 @@ Unit tests use **busted** (LuaJIT + LuaRocks). From the project root run `busted
 1. **Boot** → **Main menu** → **Match setup** (all `MatchConfig` fields, dual **Ready**, validate).
 2. **Play** — procedural map **every round**, alternating turns, **rocket** + **grenade**, wind, optional turn timer.
 3. **Pause** (Esc / Start) — resume, restart, setup, menu.
-4. **Round / match end** overlays — continue rounds, **Rematch** uses `session.last_match_config`, session **match wins** only on full match victory.
+4. **Round / match end** overlays — continue rounds, **Rematch** uses `session.last_match_config`, session **match wins** only on full match victory. Start a **new match** from the menu flow to return through **Match setup** and change seed or rules.
 
 ## Polish (audio / VFX / input)
 
