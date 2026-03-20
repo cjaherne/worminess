@@ -2,7 +2,7 @@
 
 ## Summary
 
-Reading the architect design and `turn_state.lua` to align §4.1 with the Game Designer model and fix the R10 crosswalk.
+Reading the architect design, `turn_state.lua`, and the game designer turn model to align §4.1 and the R10 crosswalk with the repo and merged DESIGN.md.
 
 
 
@@ -12,13 +12,7 @@ Reading the architect design and `turn_state.lua` to align §4.1 with the Game D
 
 
 
-
-
-
-
-
-Updating the design doc: aligning §2 with the repo (`src/config.defaults.lua`, existing `src/sim/*`), rewriting §4.1 to defer to the Game Designer's pseudocode as normative, and narrowing the R10 crosswalk to shared keyboard+mouse only.
-
+Updating the architect design to reflect the implemented codebase, merged DESIGN.md Part A (normative turn model + override clause), and overseer R10/input_manager clarity.
 
 
 
@@ -38,37 +32,35 @@ Updating the design doc: aligning §2 with the repo (`src/config.defaults.lua`, 
 
 
 
+Summary of updates to [`.pipeline/love-architect-design.md`](.pipeline/love-architect-design.md):
 
+### As-built architecture (§1–2, §5–7, §9)
+- **Scene flow** matches `src/app.lua`: `menu` → `match_setup` → `play` / `pause` → `match_end`, plus `app.quit_match_to_results` / `app.end_match`.
+- **§2** is an **as-built tree**: `assets/sprites/`, `src/audio/sfx.lua`, `src/render/*`, `src/ui/hud.lua`, `src/util/viewport.lua`, `src/util/gamepad_menu.lua`, `tools/gen_sprites.mjs`, and root docs (`CODING_NOTES.md`, `ASSETS.md`, `README.md`). Removed obsolete `[add]` / `boot` / `round_end` entries.
+- **§5** describes **current** `terrain_gen` usage and consumers instead of a greenfield recipe.
+- **§6** documents **`app.quit_match_to_results`** → `session_scores.record_match_outcome`.
+- **§7.3** matches real `app.load` (sprites, SFX, `push("menu")`, viewport).
+- **§9** `require` graph updated for viewport, audio, and play drawing through scenes.
 
+### §4.1 — Overseer: default = Game Designer pseudocode
+- States clearly: **normative spec** is **`DESIGN.md` Part A** — *Turn model* pseudocode.
+- Quotes the merged doc rule: **that pseudocode overrides conflicting architecture prose** (including this file).
+- Adds a short **symmetric same-slot** summary with “pseudocode wins on edge cases.”
+- **As-built table** tied to `turn_state.lua` (`advance_after_turn` with ring step ≥ 1, `end_turn`, `update_timer`, `active_mole`).
+- Removed the old “reconcile if same slot” warning; current `advance_after_turn` matches the designer intent.
+- **Maintenance:** `end_turn` advances **`active_player`**’s roster, then switches turn — callers must preserve that invariant.
 
+### R10 / input (Overseer)
+- **`input_manager.lua`** row: **R10 is not the traceability owner**; R10 lives in **`keyboard_mouse.lua`** only; R11 in **`gamepad.lua`**.
+- **§12 R10** unchanged: still **`keyboard_mouse.lua`** only for shared KB+M (`shared_kb`).
+- **§10** item 2 uses **`turn_state:active_mole(moles)`**.
 
-Noting a possible mismatch: `turn_state.lua`'s `advance_after_turn` may re-select the current slot. Adding a coding-agent note to align with the Designer's ring-advance.
+### Other
+- **§3.1** `MatchSettings` shape aligned with **`match_settings.lua`** (`wind`, `first_player`, `friendly_fire`, `map_seed`, etc.).
+- **§3.3** turn state description matches the real fields (no fictional `phase` enum).
+- **§11 JSON** `luaModules` expanded for keyboard/gamepad, viewport, audio, and corrected `turn_state` API names.
 
-
-
-
-Here’s what was updated in [`.pipeline/love-architect-design.md`](.pipeline/love-architect-design.md):
-
-### §4.1 — Defer to Game Designer pseudocode
-- **Normative behavior** is explicitly the **`DESIGN.md` → Game Designer → “Turn model”** block (`on_match_start`, `on_end_turn`, `advance_mole_index`), with `.pipeline/game-designer-design.md` as a duplicate for history.
-- Stated clearly: **if anything disagrees, that `DESIGN.md` pseudocode wins**; §4.1 is **routing/mapping**, not a second ruleset.
-- Removed the duplicate architect pseudocode block; replaced with a **table** mapping designer concepts → `src/sim/turn_state.lua` (`active_player`, `mole_slot`, `M:end_turn`, `M:update_timer`, etc.).
-- Added a **coding-agent** bullet: ring advance must match designer semantics (**at least one step** on the roster); flag to reconcile `M:advance_after_turn` if it can keep the same living slot after end-turn.
-
-### §12 — R10 crosswalk (shared KB+M only)
-- **R10** now points only to **`keyboard_mouse.lua`** (and `DESIGN.md` for bindings), scoped to **`shared_kb`**. `input_manager.lua` is **not** listed on R10.
-
-### §2 + §10 — Repo alignment
-- Baseline and tree updated for **`src/config.defaults.lua`** (not `src/config/defaults.lua`) and **existing** `src/sim/*` (`terrain`, `terrain_gen`, `physics`, `damage`, `turn_state`).
-- Optional **`keymaps_shared.lua`** moved under **`src/input/`**.
-- §10 item 4 references **`src/config.defaults.lua`** and **`keyboard_mouse.lua`** for R10.
-
-### §4 component table + JSON
-- `turn_state.lua` row now cites **`DESIGN.md`** + §4.1 mapping.
-- JSON **considerations** includes normative turn spec in **`DESIGN.md`**.
-
-No `.lua` files were edited—design markdown only.
+No `.lua` or other implementation files were changed—design markdown only.
 
 ## Files Created/Modified
 - .pipeline/love-architect-design.md
-- .pipeline/love-ux-design.md
