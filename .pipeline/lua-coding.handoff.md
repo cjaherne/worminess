@@ -2,27 +2,12 @@
 
 ## Summary
 
-Implementing sub-task 3: enhancing the HUD, polishing projectile and character visuals, and verifying turn rotation and match options. Reviewing the codebase.
+Implementing gamepad menu navigation, minimal procedural SFX hooks, and an optional turn-handoff toast. Reading the relevant files.
 
 
 
 
-Implementing HUD enhancements (scores, HP, turn phase), visual polish for moles and projectiles, syncing turn slots when moles die mid-match, and adding a read-only “5 moles per team” row in match setup.
-
-
-
-
-
-
-
-
-
-Implementing changes: adding `turn:sync_slots_to_living` after mole deaths, then updating HUD, visuals, and match setup.
-
-
-
-
-Fixing `love.graphics.arc` call for LÖVE 11 API (no `"open"` parameter).
+Adding procedural SFX, a shared gamepad menu helper, scene handlers (menu, match_setup, match_end, pause), turn-handoff toast in play, and updating CODING_NOTES and README.
 
 
 
@@ -52,46 +37,52 @@ Fixing `love.graphics.arc` call for LÖVE 11 API (no `"open"` parameter).
 
 
 
-Here’s what sub-task **3 of 3** delivered.
 
-### HUD (`src/ui/hud.lua`)
 
-- **Turn banner:** Player number, **Team A/B**, **active slot**, **HP (current/max)**, a short **phase** line (resolving shot / reposition+end turn / move–aim–fire), plus **turn timer** when it’s enabled.
-- **Session scores:** Three **chips** for **P1 wins**, **P2 wins**, and **draws**, plus **matches finished** (R6).
-- **Weapon panel:** Clear **selection highlight**, rocket vs grenade label, **power bar**, and a **live grenade fuse** bar when a grenade is in the world.
-- **Wind panel:** Icon + strength label + **blowing left/right** and a large arrow.
-- **Roster:** **S1–S5**, **numeric HP** for living moles, stronger **2px-style outline** on the **active** mole (current player + slot), adjusted layout to fit **720p**.
 
-### Visual polish (`src/render/mole_draw.lua`, `play.lua`)
 
-- Moles: **shadow**, **team-colored ground ellipse**, **cooler tint** for the **non-active team**, clearer **active ring** and aim overlay.
-- **Rocket:** **Trailing embers**, **nose glow**, **streak** ahead of the sprite.
-- **Grenade:** **Fuse ring** (`love.graphics.arc` in LÖVE 11 form), **orbiting spark**, **pulsing** green outline + soft shadow.
-- **Aim preview:** Orange for rocket, green tint for grenade.
 
-### Turn rotation & living moles (`src/sim/world.lua`)
+Here’s what was implemented for the **overseer drift** items.
 
-- After applying **HP → alive**, the world calls **`turn:sync_slots_to_living`** so if the **current mole dies during a shot**, the active **slot jumps to a living mole** before movement/input. **End-turn** still uses the existing **`turn_state`** ring advance (R8).
+### 1. Gamepad UI (`gamepadpressed` + stick/D-pad)
 
-### Match options (`src/scenes/match_setup.lua`)
+- Added **`src/util/gamepad_menu.lua`**: first connected gamepad, **D-pad or left stick** with **~0.22s cooldown** so lists don’t spin.
+- **`src/scenes/menu.lua`**: `id = "menu"`, `update` for nav, **`A`** = activate, **`A`/`B`** close How to play; footer line mentions gamepad.
+- **`src/scenes/match_setup.lua`**: `id = "match_setup"`, `update` for up/down/left/right, **`A`** = start match, **`B`** = title; footer notes **seed row is keyboard-only** for digits.
+- **`src/scenes/match_end.lua`**: **`A`** rematch, **`X`** new setup, **`B`** title (+ `sfx.ui()` on actions).
+- **`src/scenes/pause.lua`**: `update` for nav, **`A`** = same as Enter on the focused row, **`B`** = Esc (resume, cancel forfeit, or close how-to).
 
-- First row is **read-only**: **“5 moles per team (fixed for v1)”** so R7/R9 are visible in setup; **mole health** and the rest are unchanged.
+`app.gamepadpressed` still handles **Start** on play/pause first, then forwards to the top scene’s `gamepadpressed`.
+
+### 2. Minimal SFX (`love.audio`)
+
+- New **`src/audio/sfx.lua`**: builds short **procedural** `SoundData` sources for **fire** (square), **explosion** (noise burst), **UI** (sine).
+- **`app.load`** calls **`sfx.init()`**.
+- **`src/sim/world.lua`**: **`sfx.fire()`** after a successful shot, **`sfx.explosion()`** at **`explode_at`** (covers rockets and grenades).
+
+Documented in **`CODING_NOTES.md`** under **Deviations** (procedural vs `assets/audio` list) and **Overseer drift closure**.
+
+### 3. Turn handoff (UX §3.6–style, no extra scene)
+
+- **`src/scenes/play.lua`**: tracks previous **active player / slot**; on change, sets **`toast_t` ~1.65s** and **`toast_msg`** (`Next: Player N · Mole slot S`) and draws a centered banner over the HUD.
 
 ### Docs
 
-- **`README.md`** — short **HUD** section.
-- **`CODING_NOTES.md`** — **Sub-task 3** notes and **R1** traceability tweak.
+- **`README.md`**: **Menus (gamepad)**, **Audio**, **Turn handoff**, layout paths for `src/audio/` and `gamepad_menu.lua`.
+- **`CODING_NOTES.md`**: **Overseer drift closure** section; **Suggestions** updated (optional `round_end` scene, real audio files later).
 
-`love .` was smoke-run successfully after these edits.
+`love .` was smoke-run successfully after these changes.
 
 ## Files Created/Modified
 - CODING_NOTES.md
 - README.md
-- src/render/mole_draw.lua
+- src/app.lua
+- src/scenes/match_end.lua
 - src/scenes/match_setup.lua
+- src/scenes/menu.lua
+- src/scenes/pause.lua
 - src/scenes/play.lua
 - src/sim/world.lua
-- src/ui/hud.lua
 
 ## Shell Commands Run
 - `cd "C:\Users\Chris\Documents\GitHub\worminess"; $p = Start-Process -FilePath "C:\Program Files\LOVE\love.exe" -ArgumentList "." -PassThru -NoNewWindow; Start-Sleep -Seconds 2; if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }`
