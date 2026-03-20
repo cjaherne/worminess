@@ -3,20 +3,22 @@
 **Agent:** love-ux  
 **Scope:** Screens, HUD, focus/navigation, resolution/scaling, input affordances for menus and gameplay chrome. Does **not** define weapon math, terrain generation, or networking.
 
-**Codebase note (current tree):** The project already defines **`conf.lua`** (1280×720, resizable, `joystick` on), **`main.lua`** (`package.path` + `require("bootstrap")` + `app.register()`), and **`src/bootstrap.lua`** (`setDefaultFilter("nearest")`). Gameplay data and state live under **`src/game/session.lua`**, **`src/game/match_config.lua`**, **`src/game/roster.lua`**, **`src/game/turn_state.lua`**, with world/entities under **`src/world/*`** and **`src/entities/*`**. Scene IDs align with the architect merge (`src/scenes/*.lua`).
+**Codebase note (current tree):** **`main.lua`** → **`src/bootstrap.lua`** → **`src/app.lua`** (`theme.load_fonts`, `audio.sfx.init`, `Session.new`, **`scene_manager`**, replace **`scenes/boot`**). **`src/scene_manager.lua`** forwards `love.update` / `draw` / input / resize to the stack (overlays draw above **`play`**). **Implemented UX modules:** **`src/ui/theme.lua`** (logical 1280×720, `begin_draw` / `end_draw`, `clear_void`, palette, `safe_margin`, fonts 22 / 28), **`src/ui/layout.lua`** (`safe_x0` / `safe_x1`, `screen_to_logical`), **`src/ui/focus_stack.lua`**, **`src/ui/hud/play_hud.lua`**. Menus and match flow live in **`src/scenes/*.lua`**; input in **`src/input/*`**; polish per **`README.md`** / **`CODING_NOTES.md`** (SFX, VFX, stick smoothing, wheel power). Game state: **`src/game/*`** (including optional **`map_seed.lua`** for round seeds — see **Map regeneration cadence** in **`DESIGN.md`**).
 
 ### Handoff: canonical documents & anchors (merged `DESIGN.md`)
 
-Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so implementers do not rely on fragile cross-doc section numbers (e.g. “§3.1 UX table”):
+Repo-root **`DESIGN.md`** is the **unified** blueprint. Use the same **section titles** as its **Anchor index** (and the tables those sections contain)—**do not** depend on stale phrases like “§3.1 UX table” or “love-ux §3.1” without naming the heading below.
 
-| Topic | Where to look in **`DESIGN.md`** |
-|--------|-----------------------------------|
-| **MatchConfig** — field names, types, purpose, validation clamps | Section **“MatchConfig — single consolidated schema (source of truth)”** (table). **In code:** `src/game/match_config.lua` only. |
-| **Session stats** — `scores` = match wins, `matches_completed` = finished matches; UI must label wins vs matches played | Section **“Session stats definition (Overseer / coding contract)”** |
-| **`match_setup`** — dual column, dual Ready, footer, `input_scheme` | Section **“UX — scene graph & wireframes (abridged; full detail in love-ux)”** → **`match_setup` (dual column)** |
-| **Scene list, HUD checklist, pause / `game_over` rules** | Section **“requirementsChecklist — UX (love-ux)”** |
+| Topic | Anchor in **`DESIGN.md`** (section heading) |
+|--------|---------------------------------------------|
+| **MatchConfig** — fields, types, clamps | **MatchConfig — single consolidated schema** (table). **Code:** `src/game/match_config.lua`. |
+| **Session** — `scores` vs `matches_completed` vs round tallies | **Session stats definition** |
+| **When terrain regenerates** + seed / rematch behaviour | **Map regeneration cadence** |
+| **`match_setup`** — dual column, dual Ready, `input_scheme` | **UX — §5.3 `match_setup`** (and checklist **requirementsChecklist — UX**) |
+| **Scene / HUD obligations** | **requirementsChecklist — UX** plus narrative **UX §5–§7** blocks if present in merge |
+| **User-flow JSON (duplicate)** | **UX — §10 Structured handoff JSON** (full JSON often pasted in merge) |
 
-**This file** — **`.pipeline/love-ux-design.md`** — remains **canonical for full UX depth** wherever **`DESIGN.md`** is abridged: **pixel wireframes (§5)**, **widget/copy columns for MatchConfig (§3.2)**, **interactions (§6)**, **accessibility (§7)**, and **structured JSON (§10)**. If anything conflicts, **`DESIGN.md`** wins for **MatchConfig** and **session semantics**, then **`src/game/*.lua`**.
+**Canonical for UX depth not fully inlined in `DESIGN.md`:** **`.pipeline/love-ux-design.md` (this file)** — wireframe pixel tables (**§5**), MatchConfig **widget/copy** extension (**§3.2**), **§6–§7**, and **§10** here. If anything conflicts: **`DESIGN.md`** wins on **MatchConfig**, **session semantics**, and **map cadence**; then **`src/game/*.lua`** and implemented scenes/HUD.
 
 ---
 
@@ -37,10 +39,10 @@ Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so
 |----------------------------------|---------|--------|
 | `boot` | Asset load + optional **title splash** | Architect: load fonts/audio then push `main_menu`. UX: treat **title** as either the first 1–2s of `boot` or the initial paint of `main_menu` (pick one in code; do not add a orphan scene without updating architect merge). |
 | `main_menu` | Main hub | Buttons: **Local match** → `match_setup`; **Options** (optional v1: stub); **Quit**. Show **session** wins (`session.get_scores()`). |
-| `match_setup` | Edit **`match_config`** + **input_scheme** + dual ready | Field set = **`DESIGN.md` → MatchConfig table** + `validate()` in `match_config.lua`. Layout / Ready strip: **`DESIGN.md` → `match_setup` (dual column)** and **§5.3** (below). |
+| `match_setup` | Edit **`match_config`** + **input_scheme** + dual ready | Field set = **`DESIGN.md` — MatchConfig — single consolidated schema** + `validate()`. Layout / Ready: **`DESIGN.md` — UX — §5.3 `match_setup`** and **§5.3** (this file, pixels). |
 | `play` | Gameplay + world draw + **HUD** | Formerly called `playing` in early UX drafts; **use `play` everywhere** in code. |
 | `pause` | Modal overlay | Session stats + resume / restart / setup / main menu. |
-| `game_over` | Round **or** match outcome + rematch | Replace UX-only label **`match_summary`**: same scene, **layout variant** `round_end` vs `match_end` (copy, primary button). Session bump per **`DESIGN.md` — Session stats definition** + **§9** (implementation notes, below). |
+| `game_over` | Round **or** match outcome + rematch | Replace UX-only label **`match_summary`**: same scene, **layout variant** `round_end` vs `match_end`. Session bump per **`DESIGN.md` — Session stats definition** + **§9** (below). |
 
 **In-`play` presentation (not separate scenes):**
 
@@ -49,51 +51,38 @@ Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so
 | **`round_interstitial`** | Toast / banner driven by **`turn_state.phase`** (`interstitial`, `round_end`) while stack top remains **`play`**; avoid popping to `game_over` until designer rules say “round over UI”. |
 | **`team_roster`** | Optional panel inside **`match_setup`** or omit v1; roster is already **`src/game/roster.lua`** (`mole_order`, five moles). |
 
-Transitions: **§10 — Structured handoff JSON** (`userFlows`, below); summary also in **`DESIGN.md` — UX — scene graph** JSON block.
+Transitions: **§10** (`userFlows`, below) and **`DESIGN.md` — UX — §10 Structured handoff JSON** (merged duplicate).
 
 ### 1.3 Base resolution and scaling
 
-- **Logical canvas:** `1280 × 720` (16:9) — already matches **`conf.lua`** (`t.window.width` / `height`) and **`src/data/constants.lua`** (`WORLD_W`, `WORLD_H`). All layout numbers below are **logical pixels** on that canvas.
-- **Resizable window:** `conf.lua` sets `resizable = true` and minimum 800×450; UX must apply **uniform scale** + letterbox/pillarbox so HUD stays proportional. Maintain a **safe margin** of `24px` at 1× (scale with `uiScale`).
-- **UI scale factor:** `uiScale = min(screenW/1280, screenH/720)`; multiply layout constants when drawing.
+- **Logical canvas:** `1280 × 720` — **`conf.lua`**, **`data.constants`** (`WORLD_W`, `WORLD_H`), and **`ui.theme`** (`logical_w` / `logical_h`). All **§5** numbers are **logical pixels** before `theme.begin_draw()` scaling.
+- **Uniform scale + letterbox:** Implemented in **`src/ui/theme.lua`** (`begin_draw` / `end_draw`); **`src/app.lua`** calls **`theme.clear_void()`** then **`begin_draw`** → **`scene_manager:draw()`** → **`end_draw`**.
+- **Safe margin:** `theme.safe_margin` (**24**); **`layout.safe_x0` / `safe_x1`** for clamping hitboxes. Pointer coords: **`layout.screen_to_logical(mx, my)`** for UI under scale.
 
 ---
 
-## 2. Proposed file / directory structure (UX-facing)
+## 2. File / directory structure (UX-facing)
 
-These paths are **specification only** — no implementation in this task. **Architect owns** `src/scenes/*.lua` and `src/app.lua`; **UX owns** composable draw/focus helpers under `src/ui/` that scenes **call into** (keep scenes thin).
+### 2.1 Implemented (repository)
 
 ```
-assets/
-  fonts/
-    ui_bold.ttf          # menu + HUD numerals (license-clear)
-    ui_regular.ttf
-  ui/
-    atlas_moles_ui.png   # nine-slice panels, buttons, icons (weapon silhouettes)
-    theme.lua            # optional: colors, corner radii (data, not logic)
-src/
-  scenes/                # love-architect: boot, main_menu, match_setup, play, pause, game_over
-  ui/
-    theme.lua            # semantic colors: teamA, teamB, accent, danger
-    layout.lua           # anchors, safe rect, scale helper
-    focus_stack.lua      # controller focus ring + stack for overlays
-    widgets/
-      button.lua
-      slider.lua
-      stepper.lua        # numeric match vars (health, wind, fuse, …)
-      toggle.lua         # friendly_fire, per-player Ready
-      panel.lua
-    compose/
-      main_menu_view.lua
-      match_setup_view.lua
-      pause_view.lua
-      game_over_view.lua # variants: round_end | match_end
-    hud/
-      play_hud.lua       # turn banner, weapon strip, wind, move budget, optional session chip
-      toast.lua          # short messages (“Player 2’s turn”, interstitial copy)
+src/app.lua                 # theme + SceneManager lifecycle
+src/scene_manager.lua
+src/scenes/boot.lua … game_over.lua
+src/ui/theme.lua            # colors, logical canvas, begin/end draw, fonts
+src/ui/layout.lua           # safe_x0/x1, screen_to_logical
+src/ui/focus_stack.lua
+src/ui/hud/play_hud.lua     # in-play HUD + interstitial strip (see §5.4)
+src/audio/sfx.lua           # UI-adjacent blips (optional hooks)
 ```
 
-**Rationale:** **Scenes** handle stack lifecycle and delegate drawing/focus to **`src/ui/`**; **HUD** updates every frame from **`turn_state`** + **`match_config`** while **`play`** is on top.
+**Match setup / menus** are drawn inside **`src/scenes/match_setup.lua`**, **`main_menu.lua`**, etc. (no separate `ui/compose/*` layer yet).
+
+### 2.2 Optional extensions (if refactoring)
+
+Split large scenes into **`src/ui/compose/*`**; add **`src/ui/widgets/*`** (button, stepper, slider) if menu code duplicates grow; extract a dedicated **`toast.lua`** only if non-`play` scenes need the same queue. **Atlas / TTF assets** under **`assets/`** when replacing `love.graphics.newFont` defaults.
+
+**Rationale:** **`play_hud.draw(ctx)`** centralises combat HUD; **`theme`** owns transform so all UI shares one scale pipeline.
 
 ---
 
@@ -138,7 +127,7 @@ Edit in **`match_setup`**; always run **`match_config.validate(c)`** before **`p
 | `input_scheme` | Radio | `"shared_kb"` vs `"dual_gamepad"` (existing constants in code) |
 | `teams_per_player` | Read-only label | From `data.constants.MOLES_PER_TEAM` (5) |
 
-**Dual confirm (product brief):** two **`ready_p1` / `ready_p2`** booleans are **UI-local** until both true, then **Start match** enabled; aligns with **`DESIGN.md` — `match_setup` (dual column)** and **§5.3** (below).
+**Dual confirm (product brief):** two **`ready_p1` / `ready_p2`** booleans are **UI-local** until both true, then **Start match** enabled; aligns with **`DESIGN.md` — UX — §5.3 `match_setup`** and **§5.3** (this file).
 
 ### 3.3 Turn + HUD presentation (`src/game/turn_state.lua` + roster + active mole)
 

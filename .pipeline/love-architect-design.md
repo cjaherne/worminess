@@ -1,236 +1,231 @@
 # LÖVE Architect Design — `love-architect`
 
-**Scope:** Lua 5.1 / LÖVE **11.4** — module boundaries, `require` direction, `love` lifecycle delegation, scene stack, systems layout, procedural mapgen contract, 2P input routing.  
-**Authoritative merge:** Product goals, session semantics, and the canonical repo snapshot live in root [`DESIGN.md`](DESIGN.md) (*Moles — Unified DESIGN.md*). **This file does not repeat the product brief** — see [`DESIGN.md`](DESIGN.md) § **Original task (source of truth)** once (merge note on duplicate blocks below).
+**Role in the pipeline:** Module boundaries, `require` direction, `love` lifecycle wiring, scene stack behaviour, systems orchestration, procedural map **cadence** and **seed derivation** as they appear in code.  
+**Product brief:** Not repeated here — single authoritative copy in root [`DESIGN.md`](DESIGN.md) § **Original task (source of truth)**. (Overseer: avoid duplicating that block in *this* file or elsewhere outside `DESIGN.md`; merged `DESIGN.md` already states “Original task appears only once”.)
+
+**Conflict rule:** Behaviour and numeric policies → [`DESIGN.md`](DESIGN.md). **Where code lives and who requires whom** → this document + actual `src/` layout.
 
 ---
 
-## 0. Doc hygiene note (orchestrator — not `DESIGN.md` edits by this agent)
+## 1. Repository snapshot (implemented — March 2026)
 
-[`DESIGN.md`](DESIGN.md) currently contains **two identical** “Original task (source of truth)” blocks near the top. **Recommendation:** keep **one** authoritative block (the first). Remove the second, *or* replace it with: *“Non-authoritative duplicate — see § Original task above.”* so future edits cannot drift. This pipeline artifact only records that guidance; per pipeline rules the love-architect agent does **not** patch [`DESIGN.md`](DESIGN.md).
+**Tech stack:** LÖVE **11.4**, Lua 5.1 ([`conf.lua`](conf.lua)).
 
----
+**Entry:** [`main.lua`](main.lua) extends `package.path`, [`src/bootstrap.lua`](src/bootstrap.lua), `require("app")` → [`app.register()`](src/app.lua).
 
-## 1. Repository snapshot (cross-reference + architect deltas)
+The architecture described in older merges as “expected additions” (`app`, `scene_manager`, `scenes`, `input`, `systems`, `ui`) is **now present**. If [`DESIGN.md`](DESIGN.md) still lists only “Expected additions”, the orchestrator should refresh that section to match the tree below (avoids implementers thinking modules are missing).
 
-**Full file list and “what exists”:** use [`DESIGN.md`](DESIGN.md) § **Repository snapshot (authoritative for “what exists”)**.
+### 1.1 Layout (authoritative file tree)
 
-**Architect-verified delta (workspace):** [`main.lua`](main.lua) requires `app`, but **`src/app.lua` is still absent** — `love .` remains blocked until the Coding Agent adds it (or changes entry wiring).
+```
+(root)/
+  conf.lua, main.lua
+  DESIGN.md, README.md, CODING_NOTES.md
+src/
+  app.lua, bootstrap.lua, scene_manager.lua
+  audio/sfx.lua
+  core/rng.lua, timer.lua, vec2.lua
+  data/constants.lua, weapons.lua
+  entities/mole.lua, projectile.lua, grenade.lua
+  game/match_config.lua, session.lua, roster.lua, turn_state.lua, map_seed.lua
+  input/bindings.lua, devices.lua, input_state.lua, stick.lua
+  scenes/boot.lua, main_menu.lua, match_setup.lua, play.lua, pause.lua, game_over.lua
+  systems/world_update.lua, weapons.lua, explosions.lua, turn_resolver.lua, vfx.lua
+  ui/theme.lua, layout.lua, focus_stack.lua
+  ui/hud/play_hud.lua
+  world/map.lua, terrain.lua, collision.lua
+  world/mapgen/init.lua, heightfield.lua, caves.lua, spawns.lua
+```
 
-**Expected additions (aligned with unified DESIGN):** `src/app.lua`, `src/scene_manager.lua`, `src/scenes/*`, `src/input/*`, `src/systems/*`, **`src/ui/*`** (HUD/widgets per love-ux), `assets/*` as needed.
+**Optional:** `assets/` for future non-procedural art; current README documents **procedural SFX** in [`src/audio/sfx.lua`](src/audio/sfx.lua) (no binary audio files required for baseline).
 
 ---
 
 ## 2. High-level architecture
 
-### Runtime model
+### 2.1 Runtime
 
-- **Single-threaded** LÖVE loop: `love.load` → `love.update(dt)` / `love.draw()`.
-- **Scene stack:** `scene_manager` forwards callbacks to the top scene; pause as overlay or pushed scene per UX.
-- **`play` scene** owns **match runtime**: frozen `MatchConfig` snapshot, reference to [`session`](src/game/session.lua), roster, [`turn_state`](src/game/turn_state.lua), `map` + `terrain`, entity lists, projectile/grenade lists, explosion queue.
-- **Round UX without popping `play`:** per unified DESIGN / love-ux, **round interstitial** uses `turn_state.phase` values such as `interstitial` / `round_end` **while the stack top remains `play`** — do not add a separate scene unless the stack contract changes.
-- **Pure Lua leaves:** [`core/rng`](src/core/rng.lua), [`core/vec2`](src/core/vec2.lua), [`world/mapgen/*`](src/world/mapgen/init.lua), [`world/collision.lua`](src/world/collision.lua) core math — no `require("app")` or `scenes/*`.
+- **Single-threaded** LÖVE loop.
+- **Application shell:** [`src/app.lua`](src/app.lua) owns `Session` ([`game.session`](src/game/session.lua)), constructs [`scene_manager.new(get_context)`](src/scene_manager.lua), registers **all** relevant `love.*` callbacks.
+- **Frame pipeline:** `love.update` clamps `dt` via [`data.constants`](src/data/constants.lua) (`MAX_DT`), then `sm:update(dt)` (**top scene only**). `love.draw` clears via [`ui.theme`](src/ui/theme.lua), applies letterbox/scaling (`theme.begin_draw` / `end_draw`), draws **entire stack** bottom → top so pause overlays the play scene.
+- **Match runtime** lives in [`scenes/play.lua`](src/scenes/play.lua): `MatchConfig` snapshot, roster, turn FSM, world (`map`, `terrain`), entities, weapons/explosions/VFX — not in a global singleton except what `app` holds (`session`, `sm`).
 
-### Dependency direction (require graph)
+### 2.2 Map regeneration cadence (code ↔ DESIGN)
 
-```
-main.lua → bootstrap → app.lua → scene_manager → scenes/*
+[`DESIGN.md`](DESIGN.md) **Map regeneration cadence** is the behaviour contract. Implementation pattern:
 
-scenes/play.lua
-  → game.session, game.match_config, game.roster, game.turn_state
-  → world.map, world.terrain, world.collision
-  → world.mapgen.init (round/match boundary)
-  → entities/*, systems/*
-  → ui/* (draw/layout helpers; scenes own when to call)
+1. **Each round**, during round setup in **play** (after interstitial / winner known, before placing moles), compute `seed` with [`game.map_seed.derive(procedural_seed, round_index)`](src/game/map_seed.lua).
+2. Call [`world.mapgen.init.generate(match_config, seed)`](src/world/mapgen/init.lua) → `{ map, terrain, rng }`.
+3. **Never** reuse the previous round’s terrain ImageData for a new round within the same match.
 
-world/mapgen/*  → terrain, map, core/rng only
-entities/*      → no scenes; callbacks or world table passed in
-```
+**Seed semantics (implemented in `map_seed.lua`):**
 
-**Rule:** No circular requires — `mapgen` and `entities` never `require` `app` or `scenes/*`.
+- `procedural_seed == nil` → new random integer per round (`love.math.random`).
+- `procedural_seed` set → deterministic mix of seed + `round_index` so each round differs but a locked config reproduces the same **sequence** across runs and Rematch.
 
----
-
-## 3. File / directory structure
-
-### 3.1 Current + target layout
+### 2.3 Dependency direction (`require` graph)
 
 ```
-project root/
-├── conf.lua
-├── main.lua
-├── DESIGN.md
-├── assets/
-└── src/
-    ├── bootstrap.lua          # EXISTS
-    ├── app.lua                # ADD — required by main.lua
-    ├── scene_manager.lua      # ADD
-    ├── input/
-    │   ├── bindings.lua
-    │   ├── devices.lua
-    │   └── input_state.lua    # optional; recommended
-    ├── ui/                    # ADD — scaling, HUD panels, widgets (love-ux)
-    ├── core/                  # EXISTS
-    ├── data/                  # EXISTS
-    ├── game/                  # EXISTS
-    ├── world/                 # EXISTS (+ mapgen/)
-    ├── entities/              # EXISTS
-    ├── systems/               # ADD
-    └── scenes/                # ADD
-        ├── boot.lua
-        ├── main_menu.lua
-        ├── match_setup.lua
-        ├── play.lua
-        ├── pause.lua
-        └── game_over.lua
+main.lua → bootstrap → app.lua
+app.lua → scene_manager, game.session, data.constants, ui.theme, audio.sfx (load), scenes.boot
+
+scene_manager → (scenes pushed by app / scene transitions)
+
+scenes/* → game.*, input.*, ui.*, systems.*, world.*, entities.* as needed
+
+world/mapgen/* → world/terrain, world/map, core/rng (no scenes, no app)
+
+entities/* → avoid requiring scenes; receive world/callbacks from systems or play
+
+systems/* → world, entities, game state tables passed from play (no scene require)
 ```
 
-**Scene filenames:** Must match UX canon: `play` (not `playing`), `game_over` (not `match_summary`).
+**Rule:** No cycles — `mapgen` and `entities` do not `require` `app` or `scenes/*`.
+
+### 2.4 Scene stack semantics
+
+- [`scene_manager.lua`](src/scene_manager.lua): `push`, `pop`, `replace` (replaces **top** only; underlays stay — used for pause over play).
+- **Input:** forwarded to **top** scene only (`keypressed`, mouse, gamepad, wheel).
+- **`emit`:** optional `top:on_emit(name, ...)` for cross-cutting signals.
+
+### 2.5 Round UX vs scenes
+
+Per unified DESIGN / UX: **round interstitial** / **round_end** phases should stay **inside** [`scenes/play.lua`](src/scenes/play.lua) (`turn_state.phase`), not a separate scene, unless the stack contract is deliberately changed.
 
 ---
 
-## 4. Key data models, interfaces, schemas
+## 3. `love` lifecycle (as implemented)
 
-### 4.1 `MatchConfig` (single schema)
+| Callback | Delegation |
+|----------|------------|
+| `love.load` | `theme.load_fonts()`, `audio.sfx.init()`, `Session.new()`, `scene_manager.new`, `replace(boot)` |
+| `love.update` | `dt = min(dt, MAX_DT)`, `sm:update(dt)` |
+| `love.draw` | `theme.clear_void()`, `begin_draw`, `sm:draw()` (full stack), `end_draw` |
+| `love.resize` | all scenes `resize` |
+| `love.keypressed` / `released` | forward to top scene |
+| `love.gamepadpressed` / `released` | forward to top scene |
+| `love.mousepressed` / `released` / `moved` / `wheelmoved` | forward to top scene |
+| `love.joystickadded` / `removed` | `input.devices.refresh_joysticks()` |
 
-**Code source of truth:** [`src/game/match_config.lua`](src/game/match_config.lua) (`defaults`, `validate`).  
-**Narrative / lobby table:** [`DESIGN.md`](DESIGN.md) MatchConfig / match-setup sections.
+**Pseudocode (round world build in play):**
 
-| Field | Notes |
-|--------|--------|
-| `mole_max_hp`, `rounds_to_win`, `wind_strength`, `grenade_fuse_seconds`, `turn_time_limit`, `friendly_fire`, `procedural_seed`, `map_width`, `map_height`, `teams_per_player`, `input_scheme` | As implemented + validated in `match_config.lua`; match setup must edit **all** fields the unified DESIGN lists for the lobby. |
-
-**Weapons tuning:** [`src/data/weapons.lua`](src/data/weapons.lua). Grenade fuse at fire time: prefer `match_config.grenade_fuse_seconds` unless a single override rule is documented in code.
-
-### 4.2 `Session` semantics
-
-**Do not redefine here.** Follow [`DESIGN.md`](DESIGN.md) § **Session stats definition**: `scores[1|2]` = **match wins** since launch; `matches_completed` = finished **matches**; not round tallies without rename + UI update.
-
-### 4.3 Roster / turn rotation
-
-**Behaviour:** [`DESIGN.md`](DESIGN.md) requirements (starting player alternation, `roster.rotate_order` / `mole_order`, `next_living_mole_index`, `turn_state.start_match_turn(starting_player)`). **Architecture split:** [`turn_state.lua`](src/game/turn_state.lua) holds phase + indices; `systems/turn_resolver.lua` advances when the world is quiescent (projectiles settled, explosion queue drained).
-
-### 4.4 Mapgen contract
-
-- **API:** [`world.mapgen.init.generate(match_config, seed)`](src/world/mapgen/init.lua) → `{ map, terrain, rng }` (as today).
-- **When to call:** Pick **one** policy — new terrain **per round** or **per match** — document in [`scenes/play.lua`](src/scenes/play.lua) (comment + one constant) so designers and UX stay consistent.
-
-### 4.5 Terrain / collision
-
-Use existing [`terrain.lua`](src/world/terrain.lua), [`map.lua`](src/world/map.lua), [`collision.lua`](src/world/collision.lua); `systems/explosions.lua` performs carve + damage in one path, honoring `friendly_fire`.
+```lua
+-- Inside play scene round setup (conceptual)
+local seed = map_seed.derive(cfg.procedural_seed, round_index)
+local world = mapgen.generate(cfg, seed)
+-- then spawn moles from map spawns, reset projectiles/VFX queues, etc.
+```
 
 ---
 
-## 5. Component breakdown and responsibilities
+## 4. Component breakdown and responsibilities
 
-| Module | Status | Responsibility |
-|--------|--------|------------------|
-| [`conf.lua`](conf.lua) | EXISTS | Window, joystick on |
-| [`main.lua`](main.lua) | EXISTS | `package.path`, bootstrap, `app.register()` |
-| `src/app.lua` | **ADD** | Register **all** `love.*` callbacks; forward to `scene_manager`; optional central `InputRouter` hook |
-| `scene_manager.lua` | ADD | Stack, `push`/`pop`/`replace`, forward input, resize, visibility |
-| `scenes/boot.lua` | ADD | Assets, joystick detect |
-| `scenes/main_menu.lua` | ADD | New match, session scores via [`session.get_scores`](src/game/session.lua), quit |
-| `scenes/match_setup.lua` | ADD | Edit `MatchConfig`, dual Ready → Start; `match_config.validate` before entering `play` |
-| `scenes/play.lua` | ADD | Match runtime owner; update pipeline; mapgen trigger; **interstitial phases** on same scene |
-| `scenes/pause.lua` | ADD | Overlay or stack; `dt = 0` for simulation when paused |
-| `scenes/game_over.lua` | ADD | Match end, rematch / menu |
-| `input/*` | ADD | Semantic intents per **player slot**; **only active player** gets combat input during aim when `shared_kb`; mouse routing per devices module |
-| `ui/*` | ADD | Logical 1280×720 layout helpers, HUD, menus — consume `turn_state`, `match_config`, entities |
-| `systems/world_update.lua` | ADD | Moles, projectiles, grenades, gravity, terrain collision |
-| `systems/weapons.lua` | ADD | Fire from active mole |
-| `systems/explosions.lua` | ADD | Single explosion primitive; `friendly_fire` |
-| `systems/turn_resolver.lua` | ADD | Turn / round / match transitions when simulation idle |
-
----
-
-## 6. `love` lifecycle delegation
-
-### `love.load`
-
-Bootstrap ([`src/bootstrap.lua`](src/bootstrap.lua)); load persistent resources; `scene_manager.push(boot)` or `main_menu` per UX.
-
-### `love.update(dt)`
-
-1. `input_state` frame edges.  
-2. `scene_manager.update(dt)`.  
-3. In **`play`**, order matches unified DESIGN **Game Loop**: input → turn FSM → movement → projectiles → explosions / terrain → damage / knockback / fall → eliminations → round/match checks → camera.
-
-### `love.draw`
-
-Parallax/bg → terrain → moles → projectiles/FX → **UI/HUD** (`src/ui/*` + scene).
-
-### Input
-
-`love.keypressed` / `gamepadpressed` / mouse → `input_state` → `scene_manager` → scene; **play** applies only the **active** player’s profile for combat.
+| Path | Responsibility |
+|------|----------------|
+| [`src/app.lua`](src/app.lua) | Global `love` registration; owns `session` + `scene_manager`; context `{ scenes, session }` |
+| [`src/scene_manager.lua`](src/scene_manager.lua) | Stack, lifecycle, draw all layers, input to top, `emit` |
+| [`src/scenes/boot.lua`](src/scenes/boot.lua) | Hand off to main menu |
+| [`src/scenes/main_menu.lua`](src/scenes/main_menu.lua) | Session scores, navigate to match setup |
+| [`src/scenes/match_setup.lua`](src/scenes/match_setup.lua) | Edit `MatchConfig`, dual Ready, `match_config.validate`, start play |
+| [`src/scenes/play.lua`](src/scenes/play.lua) | Mapgen each round, combat loop, turn FSM, push pause, overlays, HUD data |
+| [`src/scenes/pause.lua`](src/scenes/pause.lua) | Overlay; resume / restart / setup / menu |
+| [`src/scenes/game_over.lua`](src/scenes/game_over.lua) | Match end, rematch (uses `session.last_match_config`), menu |
+| [`src/input/*`](src/input/) | Bindings, device assignment, stick smoothing, optional `input_state` |
+| [`src/systems/world_update.lua`](src/systems/world_update.lua) | Integrate moles, projectiles, grenades, terrain collision |
+| [`src/systems/weapons.lua`](src/systems/weapons.lua) | Fire weapons from active mole |
+| [`src/systems/explosions.lua`](src/systems/explosions.lua) | Terrain carve, damage, impulse; honor `friendly_fire` |
+| [`src/systems/turn_resolver.lua`](src/systems/turn_resolver.lua) | Advance turn / round / match when world quiescent |
+| [`src/systems/vfx.lua`](src/systems/vfx.lua) | Particles, shake, cosmetic feedback |
+| [`src/audio/sfx.lua`](src/audio/sfx.lua) | Procedural sound hooks |
+| [`src/ui/theme.lua`](src/ui/theme.lua), [`layout.lua`](src/ui/layout.lua), [`focus_stack.lua`](src/ui/focus_stack.lua) | Scaling, colours, menu focus |
+| [`src/ui/hud/play_hud.lua`](src/ui/hud/play_hud.lua) | In-match HUD |
+| [`src/game/map_seed.lua`](src/game/map_seed.lua) | Per-round seed derivation (DESIGN contract) |
+| [`src/world/mapgen/init.lua`](src/world/mapgen/init.lua) | Orchestrate heightfield → caves → spawns → `rebuildImageData` |
 
 ---
 
-## 7. Procedural map generation (architectural)
+## 5. Key data models and schemas
 
-Pipeline today: heightfield surface → cave carve → spawns → `rebuildImageData` ([`mapgen/init.lua`](src/world/mapgen/init.lua)). Extensions stay under `src/world/mapgen/` with [`core/rng`](src/core/rng.lua) only.
+### 5.1 `MatchConfig`
+
+**Source of truth:** [`src/game/match_config.lua`](src/game/match_config.lua) — `defaults`, `validate`, `copy`.
+
+Fields: `mole_max_hp`, `rounds_to_win`, `wind_strength`, `grenade_fuse_seconds`, `turn_time_limit`, `friendly_fire`, `procedural_seed`, `map_width`, `map_height`, `teams_per_player`, `input_scheme` (`shared_kb` | `dual_gamepad`).
+
+Lobby UX must stay aligned with [`DESIGN.md`](DESIGN.md) MatchConfig table + clamps.
+
+### 5.2 Session
+
+**Semantics:** [`DESIGN.md`](DESIGN.md) § **Session stats definition** — `scores[1|2]` = **match wins** since launch; `matches_completed` = completed **matches**; not round tallies without rename.
+
+Implementation reference: [`src/game/session.lua`](src/game/session.lua).
+
+### 5.3 Turn / roster
+
+[`src/game/turn_state.lua`](src/game/turn_state.lua), [`src/game/roster.lua`](src/game/roster.lua) — starting player alternation, mole rotation, `next_living_mole_index`, phases including interstitial (see DESIGN checklists).
 
 ---
 
-## 8. Dependencies and technology choices
+## 6. Performance and testing notes
+
+- **Hot paths:** per-frame `world_update`, terrain queries in collision, explosion carving, `terrain:rebuildImageData` only when the mask changes (not every frame).
+- **Pure / testable leaves:** [`core/vec2`](src/core/vec2.lua), [`core/rng`](src/core/rng.lua) (when not using global `love.math`), mapgen numeric stages, collision math in [`world/collision.lua`](src/world/collision.lua).  
+- **`map_seed.derive`:** when `procedural_seed` is nil, uses `love.math.random` — **not** headless-pure; for automated tests, inject or stub RNG if needed.
+
+---
+
+## 7. Dependencies
 
 | Choice | Rationale |
 |--------|-----------|
-| Stock LÖVE 11.4 | [`conf.lua`](conf.lua) |
-| No third-party Lua libs (baseline) | Matches current repo |
-| Collision behind [`world/collision.lua`](src/world/collision.lua) | Localized algorithm swaps |
-| Session RAM-only | Optional later: `love.filesystem` |
+| Stock LÖVE 11.4 | Project standard |
+| No third-party Lua libs in tree | Simpler deploy |
+| Procedural audio in [`audio/sfx.lua`](src/audio/sfx.lua) | Zero asset pipeline for SFX MVP |
 
 ---
 
-## 9. `luaModules` — public API sketch (Coding Agent)
+## 8. `luaModules` — public surface (sketch)
 
-| Path | Public surface (indicative) |
-|------|------------------------------|
-| `src/app.lua` | `register()` |
-| `src/scene_manager.lua` | `push`, `pop`, `replace`, `update`, `draw`, `emit(event, ...)` |
-| `src/input/bindings.lua` | `default_bindings()` |
-| `src/input/devices.lua` | `set_from_match_config(c)`, joystick index assignment |
-| `src/input/input_state.lua` | `pressed`, `released`, `down` per action |
-| `src/ui/*` | layout scale, HUD builders — surface defined with love-ux |
-| [`game/match_config.lua`](src/game/match_config.lua) | `defaults()`, `validate(c)` |
-| [`game/session.lua`](src/game/session.lua) | `new()`, `bump_match_win`, `get_scores` |
-| [`world/mapgen/init.lua`](src/world/mapgen/init.lua) | `generate(match_config, seed)` |
-| `systems/explosions.lua` | `apply` / queue drain |
-| `systems/weapons.lua` | `try_fire(ctx)` |
-| `systems/turn_resolver.lua` | `step(ctx)` when idle |
+| Module | Indicative API |
+|--------|----------------|
+| `app` | `register()` |
+| `scene_manager` | `new(get_context)`, `push`, `pop`, `replace`, `update`, `draw`, `resize`, input forwards, `emit` |
+| `game.match_config` | `defaults`, `validate`, `copy` |
+| `game.session` | `new`, `bump_match_win`, `get_scores`, fields per DESIGN |
+| `game.map_seed` | `derive(procedural_seed, round_index)` |
+| `world.mapgen.init` | `generate(match_config, seed)` |
+| `input.devices` | `refresh_joysticks`, scheme routing (see `CODING_NOTES.md`) |
+| `systems.*` | Called from `play` with a shared context table (pattern in code) |
 
 ---
 
-## 10. JSON handoff fragment (orchestrator / tooling)
+## 9. JSON handoff fragment
 
 ```json
 {
-  "architecture": "app → scene_manager → scenes; play owns match runtime + turn_state phases for round interstitial; mapgen.init.generate at round/match boundary; systems layer; ui/* for HUD; DESIGN.md authoritative for product + session stats.",
-  "luaModules": "See §9.",
-  "fileStructure": "§3.1",
-  "loveLifecycle": "§6",
+  "architecture": "app registers love.*; scene_manager stack; update top-only, draw full stack; play owns match runtime; map_seed.derive + mapgen.generate each round per DESIGN cadence.",
+  "luaModules": "See §8; implemented under src/.",
+  "fileStructure": "§1.1",
+  "loveLifecycle": "§3",
   "dependencies": ["LÖVE 11.4"],
   "considerations": [
-    "Implement src/app.lua before shipping.",
-    "DESIGN.md: dedupe duplicate Original task blocks (§0).",
-    "Session: match wins only in scores — see DESIGN Session stats definition.",
-    "Round interstitial: turn_state.phase inside play, not a new scene unless stack spec changes.",
-    "Document per-round vs per-match map regen in play scene."
+    "Refresh DESIGN.md repository snapshot if it still says 'expected additions' only.",
+    "map_seed uses love.math.random when procedural_seed is nil — stub for headless tests if needed.",
+    "Pause uses stack push over play — keep input forwarding consistent (top scene only)."
   ]
 }
 ```
 
 ---
 
-## 11. Implementation notes for Coding Agent
+## 10. Implementation notes for future Coding Agent work
 
-1. **Boot order:** `app.register()` registers callbacks once; scenes receive a shared `Session` (or global app context table) — avoid scattering `Session.new()` per scene without a plan.  
-2. **Match setup:** Dual Ready + Start matches unified DESIGN; validate config before `play`.  
-3. **`friendly_fire`:** Enforced in `systems/explosions.lua` (and direct-hit path if separate).  
-4. **Testing:** Prefer headless-safe tests for `mapgen`, `vec2`, collision numeric helpers.  
-5. **Conflicts:** If [`DESIGN.md`](DESIGN.md) and this file disagree, **prefer the more specific path in [`DESIGN.md`](DESIGN.md)** for behaviour; this file wins only on **where** to place wiring (files, require graph, lifecycle order).
+1. **Preserve** `require` direction when adding features: new gameplay modules hang off `play` or `systems/*`, not from `mapgen` back to scenes.  
+2. **Map cadence:** Any change to when `generate` runs must stay consistent with [`DESIGN.md`](DESIGN.md) **Map regeneration cadence** and [`map_seed.lua`](src/game/map_seed.lua).  
+3. **Session semantics:** Do not overload `scores` / `matches_completed` without DESIGN + UI updates.  
+4. **Theme draw bracket:** New global draw hooks (debug overlay) should respect `theme.begin_draw` / `end_draw` so resolution stays consistent.  
+5. **Joystick hot-plug:** Already wired in `app` → `devices.refresh_joysticks`; extend assignment UI in match setup if adding device pickers.
 
 ---
 
-*Design-only artifact: `.pipeline/love-architect-design.md`. No implementation files created.*
+*Design-only artifact: `.pipeline/love-architect-design.md`. No game implementation files created or modified by this agent.*
