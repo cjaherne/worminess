@@ -25,11 +25,11 @@ Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so
 ### 1.1 Design pillars
 
 - **Readable at a glance during motion:** large numerals, high-contrast team strips, minimal text during aiming.
-- **Fair dual-input:** every menu path completable with **either** keyboard+mouse **or** gamepad; when two gamepads are connected, **Player 1** drives global menus unless a screen explicitly splits focus (see §4).
+- **Fair dual-input:** every menu path completable with **either** keyboard+mouse **or** gamepad; when two gamepads are connected, **Player 1** drives global menus unless a screen explicitly splits focus (**§4 — Component breakdown**, below).
 - **Session truth:** “Games won since launch” is always visible from pause and end-of-match screens; optional compact chip in-match (see HUD). Source of truth: **`session.scores`**, **`session.matches_completed`** (`src/game/session.lua`).
 - **Worms-like clarity:** active mole, team, weapon, and “commit” affordance (fire / jump) must never be ambiguous in 2P hot-seat.
 
-### 1.2 Scene graph — reconciliation with love-architect
+### 1.2 Scene graph — reconciliation with architect (`src/scenes/`)
 
 **Canonical scene modules** (must match architect filenames / stack): `boot`, `main_menu`, `match_setup`, `play`, `pause`, `game_over`.
 
@@ -37,10 +37,10 @@ Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so
 |----------------------------------|---------|--------|
 | `boot` | Asset load + optional **title splash** | Architect: load fonts/audio then push `main_menu`. UX: treat **title** as either the first 1–2s of `boot` or the initial paint of `main_menu` (pick one in code; do not add a orphan scene without updating architect merge). |
 | `main_menu` | Main hub | Buttons: **Local match** → `match_setup`; **Options** (optional v1: stub); **Quit**. Show **session** wins (`session.get_scores()`). |
-| `match_setup` | Edit **`match_config`** + **input_scheme** + dual ready | Fields must mirror **`src/game/match_config.lua`** after `validate()` (see §3). **Dual confirm** (product brief): two **Ready** toggles, P1 and P2 (§5.3). |
+| `match_setup` | Edit **`match_config`** + **input_scheme** + dual ready | Field set = **`DESIGN.md` → MatchConfig table** + `validate()` in `match_config.lua`. Layout / Ready strip: **`DESIGN.md` → `match_setup` (dual column)** and **§5.3** (below). |
 | `play` | Gameplay + world draw + **HUD** | Formerly called `playing` in early UX drafts; **use `play` everywhere** in code. |
 | `pause` | Modal overlay | Session stats + resume / restart / setup / main menu. |
-| `game_over` | Round **or** match outcome + rematch | Replace UX-only label **`match_summary`**: same scene, **layout variant** `round_end` vs `match_end` (copy, primary button). Session bump occurs when mechanics say match finished (see §9). |
+| `game_over` | Round **or** match outcome + rematch | Replace UX-only label **`match_summary`**: same scene, **layout variant** `round_end` vs `match_end` (copy, primary button). Session bump per **`DESIGN.md` — Session stats definition** + **§9** (implementation notes, below). |
 
 **In-`play` presentation (not separate scenes):**
 
@@ -49,7 +49,7 @@ Repo-root **`DESIGN.md`** is the **unified** blueprint. Use these **anchors** so
 | **`round_interstitial`** | Toast / banner driven by **`turn_state.phase`** (`interstitial`, `round_end`) while stack top remains **`play`**; avoid popping to `game_over` until designer rules say “round over UI”. |
 | **`team_roster`** | Optional panel inside **`match_setup`** or omit v1; roster is already **`src/game/roster.lua`** (`mole_order`, five moles). |
 
-Transitions: see §10 JSON `userFlows`.
+Transitions: **§10 — Structured handoff JSON** (`userFlows`, below); summary also in **`DESIGN.md` — UX — scene graph** JSON block.
 
 ### 1.3 Base resolution and scaling
 
@@ -103,12 +103,14 @@ Bind UI **directly** to existing tables where possible (`src/game/*.lua`). Below
 
 ### 3.1 Session (`src/game/session.lua`)
 
+Semantics are fixed in **`DESIGN.md` — Session stats definition**: **`scores`** = **match wins** (not round wins); **`matches_completed`** = **finished matches**. UI must **label** “Wins” vs “Matches played” distinctly (main menu, pause, `game_over`).
+
 Returned by `session.new()`:
 
 | Field | UX use |
 |--------|--------|
-| `scores[1]`, `scores[2]` | Session wins since launch; **main_menu**, **pause**, **game_over** headers |
-| `matches_completed` | “Matches played” line (optional; increments via `bump_match_win`) |
+| `scores[1]`, `scores[2]` | **Match wins** since launch — **main_menu**, **pause**, **`game_over`** |
+| `matches_completed` | **Matches finished** — show as “Matches played” (or equivalent), not as round score |
 | `last_match_winner` | 1, 2, or nil — highlight on **game_over** |
 | `last_match_config` | **Rematch** pre-fill for **match_setup** |
 
@@ -120,7 +122,9 @@ matchesPlayed = session.matches_completed
 
 ### 3.2 Match config (`src/game/match_config.lua`)
 
-Edit in **`match_setup`**; always run **`match_config.validate(c)`** before starting **`play`**. Expose these in the form (clamps are implementation-defined; current code uses HP 1–500, wind ±400, fuse 0.5–8, rounds_to_win 1–9, turn_time_limit 5–120 or nil):
+**Authoritative field list + validation:** **`DESIGN.md` — “MatchConfig — single consolidated schema (source of truth)”** (must match `match_config.lua`). Do not duplicate a competing table in code comments elsewhere.
+
+Edit in **`match_setup`**; always run **`match_config.validate(c)`** before **`play`**. The following adds **UX-only** columns (widget + copy). Numeric clamps follow **`DESIGN.md`** MatchConfig table / `validate()`:
 
 | Field | Widget | UX copy |
 |--------|--------|---------|
@@ -134,7 +138,7 @@ Edit in **`match_setup`**; always run **`match_config.validate(c)`** before star
 | `input_scheme` | Radio | `"shared_kb"` vs `"dual_gamepad"` (existing constants in code) |
 | `teams_per_player` | Read-only label | From `data.constants.MOLES_PER_TEAM` (5) |
 
-**Dual confirm (product brief):** two **`ready_p1` / `ready_p2`** booleans are **UI-local** until both true, then **Start match** enabled; or require each player to press **Confirm** on their device once settings are valid (see §5.3).
+**Dual confirm (product brief):** two **`ready_p1` / `ready_p2`** booleans are **UI-local** until both true, then **Start match** enabled; aligns with **`DESIGN.md` — `match_setup` (dual column)** and **§5.3** (below).
 
 ### 3.3 Turn + HUD presentation (`src/game/turn_state.lua` + roster + active mole)
 
@@ -151,7 +155,7 @@ Edit in **`match_setup`**; always run **`match_config.validate(c)`** before star
 
 **Wind display:** `match_config.wind_strength` (scalar); format as arrow + magnitude.
 
-**Round vs match score in HUD:** if the game layer tracks “rounds won this match”, surface that beside session scores or only on **game_over** — follow merged game-designer spec; minimum is **session** from §3.1.
+**Round vs match score in HUD:** **Session** fields above are **not** round tallies (**`DESIGN.md` — Session stats definition**). If gameplay exposes “rounds won this match”, show separately (e.g. match HUD or `game_over`) without overloading `scores` / `matches_completed`.
 
 ### 3.4 Input routing (menus + play)
 
@@ -160,7 +164,7 @@ Edit in **`match_setup`**; always run **`match_config.validate(c)`** before star
 | `menuOwner` | While in menus, default **keyboard** + **joystick 1** move focus; **joystick 2** optional for **Ready** only in **match_setup** |
 | `input_scheme` | `match_config.input_scheme` — **`play`** scene routes KB/Mouse to **active_player** when `shared_kb`; maps **joystick id** to player when `dual_gamepad` |
 
-When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_setup` **except** dual-ready inputs (§5.3).
+When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_setup` **except** dual-ready inputs (**§5.3** below; also **`DESIGN.md` — requirementsChecklist — UX**).
 
 ---
 
@@ -172,7 +176,7 @@ When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_
 | `theme` | Semantic palette: background `#1a1423`, paper `#f4ede0`, ink `#2b1f33`, team A `#6cb5c8`, team B `#e8a23c`, accent `#c44dff`, danger `#e24a4a`. WCAG-style contrast for **large text** on panels. |
 | `widgets.*` | Draw + hit-test + **focus** state; emit `onConfirm`, `onCancel`, `onValueChange`. |
 | `focus_stack` | Manages ordered focusable list, wrap at edges, visual focus ring `2px` offset, `accent` color. |
-| `screens.*` | Full-screen or overlay compositions; no gameplay rules. |
+| `compose/*` | Full-screen / overlay **views** invoked from `src/scenes/*`; no gameplay rules. |
 | `hud/play_hud` | Non-modal layer: turn strip, weapon icons, wind, move budget, compact score/session chip, crosshair-adjacent hints (if mouse player). |
 | `hud/toast` | Queue of short-lived banners (1.2–2.0s) for turn changes and round rotation text. |
 
@@ -197,6 +201,8 @@ When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_
 - **Default focus:** first button (`Local match`).
 
 ### 5.3 `match_setup`
+
+**Merged summary:** **`DESIGN.md` — `match_setup` (dual column)**. **This subsection** is the **pixel-accurate** expansion.
 
 Two-column form inside panel `x: 120–1160`, `y: 100–620`.
 
@@ -276,15 +282,17 @@ Single scene with **variants**:
 
 ### 6.2 Gameplay layer (hot-seat keyboard+mouse)
 
-Document in-options screen; HUD shows subset:
+**Binding source of truth:** **`DESIGN.md` — Mechanics (summary) → Controls** and `src/input/bindings.lua` once implemented. HUD hints must **track `turn_state.active_player`** and the active **input_scheme**.
 
-- **Player 1** default bindings example: `WASD` move, `Q/E` cycle weapon, hold `Space` power, release fire, `Shift` jump — **exact keys** owned by Game Designer / input module; UX only requires **on-screen prompt** updates when the active player changes.
-- **Player 2** when active: suggest **arrow keys + RCtrl** or **IJKL** — must be **spatially distinct** from P1 to reduce accidental input.
+Document in-options / loading screen; HUD shows a **short subset** only:
+
+- **Example (from merged DESIGN — adjust if bindings table differs):** P1 — `A`/`D` move, `W`/`S` aim, hold `Shift` for power, `Space` fire, `1`/`2` weapons; P2 — non-overlapping set (e.g. numpad / arrows) per bindings.
+- **Mouse:** aim + fire for **active** player only when scheme allows (**`DESIGN.md` — Input routing**).
 
 ### 6.3 Gameplay layer (dual controllers)
 
 - **Pad index** maps to **player index** for movement/aim when it is that player’s turn.
-- When not their turn, pad inputs ignored except **Start** → pause (see §5.5).
+- When not their turn, pad inputs ignored except **Start** → pause (**§5.5 `pause`**, below — referenced from **`DESIGN.md` — requirementsChecklist — UX** pause item).
 
 ### 6.4 `match_setup` — assigning controllers
 

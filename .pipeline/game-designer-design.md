@@ -31,6 +31,21 @@ The repo already implements core data and simulation modules under `src/`. This 
 
 ---
 
+## Map regeneration cadence (default — Overseer)
+
+**Default:** Regenerate procedural terrain **once per round** (not once per match).
+
+**When `world.mapgen.init.generate(match_config, seed)` runs:** Exactly **once at the start of every round**, in the **round-setup** step—**after** the prior round’s winner is known (and any `interstitial` / `round_end` UI has advanced) and **before** teams are re-instantiated or moles are placed on spawns for that round. **Round 1** of a match uses this same path (the first call happens when the match begins play, which is the first round’s setup—there is **no** separate “match-start-only” generation path). **Do not** reuse the previous round’s terrain bitmap across rounds within one match.
+
+**Seed argument:**
+
+- If `match_config.procedural_seed` is **`nil`**: pass a **fresh random integer** for **each** `generate` call (every round gets unrelated terrain; **Rematch** still randomizes each round).
+- If `match_config.procedural_seed` is **set** (player/debug “lock”): pass a **deterministic function** of `(procedural_seed, round_index)` only (e.g. hash/mix in Lua) so **each round’s map differs** but the same config reproduces the same sequence; **Rematch** that restores `last_match_config` **preserves** that option—**round *k* after Rematch matches round *k* of the previous run** with the same locked seed (same terrain sequence for both matches).
+
+**Module reference:** Implemented as `generate` in `src/world/mapgen/init.lua` (required as `world.mapgen.init` from `src/`).
+
+---
+
 ## requirementsChecklist
 
 Cross-reference: every distinct ask from the product brief must be tickable by implementation.
@@ -41,7 +56,7 @@ Cross-reference: every distinct ask from the product brief must be tickable by i
 - [ ] **Rocket launcher** weapon: fast projectile, impact explosion, terrain damage, damage to moles in radius (`src/data/weapons.lua` → `rocket`).
 - [ ] **Grenade** weapon: arcing throwable, timed / configurable fuse, explosion with terrain and area damage (`grenade` + `match_config.grenade_fuse_seconds`).
 - [ ] **2-player local** mode only (no online in this scope); `match_config.input_scheme` distinguishes shared keyboard vs dual gamepad.
-- [ ] **Procedurally generated maps** (`src/world/mapgen/`); recommend **new terrain per match** (or per round if match flow resets map—stay consistent in one place).
+- [ ] **Procedurally generated maps** (`src/world/mapgen/`); **default cadence: new terrain every round** via `world.mapgen.init.generate` at **round setup** (see **Map regeneration cadence**).
 - [ ] **Session score tracking** since launch: **`scores` = match wins per player**, **`matches_completed` = finished matches** (see Session stats definition above).
 - [ ] **Teams:** **5 moles per player** (`src/data/constants.lua` `MOLES_PER_TEAM`); friendly-fire rule driven by `match_config.friendly_fire` (already defaults true).
 - [ ] **Rotate players each round**: alternate **starting player** / priority between rounds (tie to match round index in play state; `turn_state.start_match_turn` accepts `starting_player`).
@@ -88,7 +103,7 @@ Aligned with `src/data/weapons.lua`:
 
 ### Procedural map
 
-Pipeline in `mapgen/init.lua`: heightfield surface → cave spheres → `spawns.place_team_spawns`. Requirements: both teams get **valid spawn anchors**; map dimensions respect `match_config.map_width` / `map_height`. **Seed** from config or random for variety.
+Pipeline in `src/world/mapgen/init.lua`: heightfield surface → cave spheres → `spawns.place_team_spawns`. Requirements: both teams get **valid spawn anchors**; map dimensions respect `match_config.map_width` / `map_height`. **Invocation timing and seed/rematch rules** are fixed in **Map regeneration cadence** above (summary: **`generate` every round at round start**; seed from locked config + `round_index` or fresh random if unset).
 
 ### Damage, HP, and death
 
@@ -139,8 +154,8 @@ Centralize in orchestrator (`app` or future `input.lua`): `love.keypressed` / `l
 1. **Boot** — `love.load`: require paths set in `main.lua`; joystick scan.  
 2. **Menu** — show `session:get_scores()`, `matches_completed`, start match.  
 3. **Match setup** — edit `match_config`, pick `input_scheme`, validate.  
-4. **Play** — `mapgen.generate(match_config, seed)`; build teams via `roster.new_team`; apply **player** and **mole** rotation rules; `turn_state.start_match_turn(...)`.  
-5. **Per frame** — input → turn phase → mole physics (`collision` vs `terrain`) → projectiles/grenades → explosions → fall damage → check round end (`interstitial` / `round_end`) → match end → `session.bump_match_win`.  
+4. **Play** — For **each round**: run **`world.mapgen.init.generate(match_config, seed)`** at **round setup**, then build/refresh teams via `roster.new_team`, apply **player** and **mole** rotation, then `turn_state.start_match_turn(...)` (or equivalent for subsequent rounds).  
+5. **Per frame** — input → turn phase → mole physics (`collision` vs `terrain`) → projectiles/grenades → explosions → fall damage → check round end (`interstitial` / `round_end`) → on new round, return to step 4’s **generate** path → match end → `session.bump_match_win`.  
 6. **Pause / match over** — UX overlays; simulation `dt` zeroed when paused.
 
 **Update order:** input → FSM → moles → projectiles → terrain mutations → damage → win checks → camera (UX).  
@@ -226,7 +241,7 @@ Centralize in orchestrator (`app` or future `input.lua`): `love.keypressed` / `l
 
 1. **Orchestrator + scenes** — wire `main.lua` → `app` with menu / play / game-over if missing.  
 2. **Input** — full dual-keyboard + dual-gamepad + optional mouse routing to `turn_state`.  
-3. **Round / match rules** — wire `rounds_to_win`, interstitials, **player** and **mole** rotation at round boundaries.  
+3. **Round / match rules** — wire `rounds_to_win`, interstitials, **player** and **mole** rotation at round boundaries; **call `world.mapgen.init.generate` on every round start** per Map regeneration cadence.  
 4. **Session UI** — display `scores` as **match wins** and optionally `matches_completed` as **matches played** (clarify strings—see Session stats definition).  
 5. **Combat polish** — wind on projectiles, shared explosion path, audio/VFX hooks.  
 6. **Playtesting** — clamps in `match_config.validate`, spawn fairness in `spawns.lua`.
