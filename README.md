@@ -2,6 +2,18 @@
 
 Local 2-player **Worms**-style artillery game (moles theme). Built for **LÖVE 11.4** (works with 11.x).
 
+**Version** is tracked in `package.json` (SemVer) for releases and git tags (`v0.1.0`, …).
+
+## Features
+
+- **Turn-based combat** with **rockets** and **grenades**, wind, and terrain destruction; direct hits on moles detonate projectiles.
+- **Procedural map** regenerated **every round**; optional fixed seed from match setup.
+- **Five moles per player**, alternating **player** and **mole** each turn; **rounds-to-win** match rules.
+- **Match setup** for mole HP, wind, fuse, turn timer, friendly fire, map size, input mode, and seed — dual **Ready** gates before play.
+- **Session scoring**: match-win tallies for the current app run; **Rematch** reuses the last config.
+- **Input:** one **keyboard + mouse** (shared) with optional gamepad assist, or **two gamepads** (`dual_gamepad`); pause from **Esc** / **Start**.
+- **Presentation:** themed UI, HUD, camera shake, explosions / muzzle / exhaust VFX, and **procedural SFX** (no bundled audio files).
+
 ## Run
 
 From the project root:
