@@ -160,14 +160,14 @@ When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_
 | `widgets.*` | Draw + hit-test + **focus** state; emit `onConfirm`, `onCancel`, `onValueChange`. |
 | `focus_stack` | Manages ordered focusable list, wrap at edges, visual focus ring `2px` offset, `accent` color. |
 | `screens.*` | Full-screen or overlay compositions; no gameplay rules. |
-| `hud/playing_hud` | Non-modal layer: turn strip, weapon icons, wind, compact score/session chip, crosshair-adjacent hints (if mouse player). |
+| `hud/play_hud` | Non-modal layer: turn strip, weapon icons, wind, move budget, compact score/session chip, crosshair-adjacent hints (if mouse player). |
 | `hud/toast` | Queue of short-lived banners (1.2–2.0s) for turn changes and round rotation text. |
 
 ---
 
 ## 5. Wireframes — pixel regions (1280×720 logical)
 
-### 5.1 `title`
+### 5.1 Title splash (inside `boot` or first paint of `main_menu`)
 
 - **Background:** full-bleed illustration or gradient; vignette for readability.
 - **Center block:** `x: 440–840`, `y: 220–500`
@@ -187,29 +187,38 @@ When both pads connected, **Player 1** drives **focus** on `main_menu` / `match_
 
 Two-column form inside panel `x: 120–1160`, `y: 100–620`.
 
-- **Column A — Match variables**
-  - **Mole health** stepper: large value `min 1 — max TBD by game design`, step `5` or `10`; show number `72px` tall in `ui_bold`.
-  - Helper line: “Each player fields **5 moles**. Turn order rotates **player → mole** each round.”
-- **Column B — Input mode** (radio group or toggle)
-  - **Shared keyboard + mouse** (hot-seat): explain “Mouse aims when it’s your mole; keyboard shortcuts shown in HUD.”
-  - **Two controllers**: “P1 Menu = D-Pad / Left stick + A/B; P2 joins with Start on pad 2.”
+- **Column A — Match variables** (mirror **`match_config`**)
+  - **Mole health** (`mole_max_hp`): stepper, step `5` or `10`, **72px** numeral in `ui_bold`; clamp after validate **1–500**.
+  - **Rounds to win** (`rounds_to_win`): stepper **1–9**.
+  - **Wind** (`wind_strength`): slider **−400…400** with **0 = calm** center tick; show **← / →** icon.
+  - **Grenade fuse** (`grenade_fuse_seconds`): stepper **0.5–8** s.
+  - **Turn timer** (`turn_time_limit`): “Off” (nil) or **5–120** s.
+  - **Friendly fire** (`friendly_fire`): toggle.
+  - Helper line: “**5 moles** per player (`MOLES_PER_TEAM`). Turns alternate **teams**; **mole order** rotates each round (`roster.mole_order`).”
+- **Column B — Input mode**
+  - Radio: **`shared_kb`** — “One keyboard + mouse: **active player** uses mouse aim.”
+  - Radio: **`dual_gamepad`** — “Two controllers”; show **assign** status (§6.4).
+- **Dual ready strip** (`y: 520–600`, full width): two large chips **P1 Ready** / **P2 Ready** (filled when that player presses **Confirm** on their bound device). **Start match** stays **disabled** until both ready **and** config valid.
 - **Footer actions** (horizontal): `Back` (left), `Start match` (right) — `y: 640`, `x: 160` and `x: 920`.
 
-### 5.4 `playing` HUD (single shared view — v1)
+### 5.4 `play` HUD (single shared view — v1)
 
-Assume **one** world camera (no per-player split) unless architect mandates split-screen later.
+Scene name **`play`** (not `playing`). Assume **one** world camera (no per-player split) unless architect mandates split-screen later.
 
 | Cluster | Anchor | Size / notes |
 |---------|--------|----------------|
-| **Turn banner** | top center | `w: 560`, `h: 64`, `y: 16`, centered — shows “Player 2 · Mole 4” + team color bar `8px` under text |
-| **Scores** | top corners | P1: `x: 24`, `y: 24`; P2: right-aligned `x: 1256`, `y: 24` (measure from right). Large digits `ui_bold` |
-| **Session chip** | below score or `y: 72` | Small text: “Session: P1 3 — P2 1” optional; if clutter, show **only** in pause |
-| **Weapon strip** | bottom center | `y: 656`, icons `64×64`, gap `16`; highlight selected; show ammo/infinite per design |
-| **Wind** | top center below banner or `x: 640` | Compact: arrow + number, `y: 88` |
-| **Grenade fuse** | near active mole or bottom-left of weapon strip | Only visible when relevant; numeric + ring |
-| **Help hints** | bottom corners | `y: 600–680`: context keys — e.g. “Tab: weapon”, “Hold Space: power” (actual bindings from input spec) |
+| **Turn banner** | top center | `w: 560`, `h: 64`, `y: 16`, centered — “Player **N** · Mole **slot**” from `active_player` + `active_mole_slot` + team color bar `8px` |
+| **Scores** | top corners | P1: `x: 24`, `y: 24`; P2: right-aligned `x: 1256`, `y: 24`. Show **match** round wins if available; else session-only in chip |
+| **Session chip** | below score or `y: 72` | “Session **a–b**” optional; else **pause** only |
+| **Phase / interstitial** | overlay | When `turn_state.phase` is `interstitial` or `round_end`, reuse **toast** region (§5.6) without leaving **`play`** |
+| **Move budget** | near mole or bottom | Bar for `move_budget` vs `MOVE_BUDGET_MAX` |
+| **Weapon strip** | bottom center | `y: 656`, icons `64×64`, gap `16`; highlight `current_weapon_id` |
+| **Wind** | top center `y: 88` | From `match_config.wind_strength` |
+| **Power / charge** | bottom | Visible when `charging` or `phase == aim`; binds to `power` |
+| **Grenade fuse** | near active mole or weapon strip | When grenade entity armed / in flight (entity state), not only static config |
+| **Help hints** | bottom corners | `y: 600–680`: swap legend when **`active_player`** changes |
 
-**Mouse-specific:** when active input is keyboard/mouse for current player, show **cursor** and **aim line** (gameplay); HUD does not obscure cursor hotspot — keep bottom strip `y ≥ 600` so cursor can reach lower angles (tune after playtest).
+**Mouse-specific:** when **`input_scheme == shared_kb`** and **`active_player`** uses mouse, show **cursor** + aim line; keep HUD `y ≥ 600` where possible for low-angle shots.
 
 ### 5.5 `pause`
 
@@ -228,11 +237,13 @@ Assume **one** world camera (no per-player split) unless architect mandates spli
 - Copy pattern: “Round 4 — **Player 1 · Mole 2**”
 - Auto-dismiss `1.5s` or on any `Confirm` input
 
-### 5.7 `match_summary`
+### 5.7 `game_over` (replaces UX label `match_summary`)
 
-- **Hero outcome:** center, `y: 180–320`
-- **Score table:** this match + session totals
-- Buttons: **Rematch** (pre-fills last options), **New setup**, **Main menu**
+Single scene with **variants**:
+
+- **`round_end`:** smaller panel — round winner, living mole counts, **Continue** → back to **`play`** (new round / map per game rules).
+- **`match_end`:** full **hero outcome** `y: 180–320`, **session** table (`session.scores`, `matches_completed`), **last_match_winner** emphasis.
+- Buttons (both variants where applicable): **Rematch** (restore `session.last_match_config`), **New setup** → **`match_setup`**, **Main menu** → **`main_menu`**.
 
 ---
 
@@ -287,13 +298,14 @@ Document in-options screen; HUD shows subset:
 
 ## 9. Implementation notes for Coding Agent
 
-1. **Single source of truth:** `TurnPresentation` drives HUD; do not duplicate turn logic in UI.
-2. **Toast queue:** re-entrant safe — multiple events in one frame should serialize messages.
-3. **Resolution:** implement `push` library pattern or equivalent: `love.graphics.translate` + uniform scale + letterbox bars filled with `theme.void`.
-4. **Focus:** on window resize / gamepad connect, **reassert** default focus on current screen.
-5. **Session scores:** increment on `match_summary` confirm path, not on `playing` exit, to avoid double-count on crash mid-match.
-6. **Weapon UX:** rocket vs grenade — grenade needs **fuse** and **arc** affordances; HUD reserves space even if hidden until equipped.
-7. **Architect alignment:** screen IDs in §1.2 should match whatever scene stack the merged design names; rename consistently if merged doc differs.
+1. **Single source of truth:** HUD reads **`turn_state`**, **`match_config`**, **`session`**, and **`roster`** / active **mole** entity — never duplicate turn resolution in UI.
+2. **Toast queue:** re-entrant safe; serialize when `phase` flips and round events fire in the same frame.
+3. **Resolution:** implement `push`-style transform or equivalent: uniform scale + letterbox bars (`theme.void`); respect **`conf.lua`** min window size.
+4. **Focus:** on resize / gamepad hot-plug, reassert default focus on the active scene (`main_menu`, `match_setup`, `pause`, `game_over`).
+5. **Session scores:** call **`session:bump_match_win(player_index)`** only when game rules declare **match** finished (typically from **`game_over` match_end** path or turn resolver), not when exiting **`play`** mid-match.
+6. **Weapon UX:** rocket vs grenade — grenade shows **fuse** + arc expectation; strip always reserves slot for both **`weapons`** entries in `turn_state`.
+7. **Scene filenames:** use **`src/scenes/play.lua`**, **`game_over.lua`**, etc., per **love-architect**; UX compose modules under **`src/ui/`** only.
+8. **`main.lua`** expects **`app.register()`** — wire **`SceneManager`** there; first push **`boot`** or **`main_menu`** per architect merge.
 
 ---
 
@@ -303,47 +315,50 @@ Document in-options screen; HUD shows subset:
 {
   "userFlows": {
     "cold_start": [
-      "Launch → boot (assets) → title",
-      "Title: confirm → main_menu",
+      "Launch → love.load → app → SceneManager",
+      "boot: load fonts/audio/ui atlas → push main_menu (title splash optional inside boot)",
       "main_menu: Local match → match_setup",
-      "match_setup: set mole health, choose input mode, assign pads if needed → playing",
-      "playing: end-of-round → round_interstitial → playing",
-      "playing: last mole eliminated → match_summary",
-      "match_summary: Rematch → playing (same options) | New setup → match_setup | Main menu → main_menu",
-      "any: Esc/Start → pause → Resume/Restart/Setup/Quit branches"
+      "match_setup: edit match_config fields + input_scheme; dual Ready; validate → push play",
+      "play: gameplay + play_hud; phase interstitial/round_end shows toast without popping scene",
+      "play: round complete → game_over variant round_end → play (or regenerate map per rules)",
+      "play: match complete → game_over variant match_end → bump session → Rematch/New setup/Main menu",
+      "any: Esc / Start → pause overlay on play (and optionally menus) → Resume / Restart / match_setup / main_menu"
     ],
     "session_stats": [
-      "sessionWins update on match_summary acknowledgment",
-      "pause always shows session totals"
+      "Display session.scores[1], session.scores[2] on main_menu, pause, game_over match_end",
+      "bump_match_win only on match victory path"
     ]
   },
   "wireframes": {
     "baseResolution": [1280, 720],
     "safeMarginPx": 24,
-    "screens": ["title", "main_menu", "match_setup", "playing", "pause", "round_interstitial", "match_summary"]
+    "architectScenes": ["boot", "main_menu", "match_setup", "play", "pause", "game_over"],
+    "uxOverlaysInsidePlay": ["toast", "phase_interstitial", "round_banner"],
+    "gameOverVariants": ["round_end", "match_end"]
   },
   "interactions": {
     "menu": {
       "nav": ["up/down", "dpad", "stick_debounced"],
       "confirm": ["enter", "mouse_click", "gamepad_a"],
-      "back": ["escape", "gamepad_b"]
+      "back": ["escape", "gamepad_b"],
+      "match_setup_ready": ["per_player_confirm_for_ready_chips"]
     },
     "gameplay_hot_seat": {
-      "principle": "HUD and prompts switch with activePlayerIndex; non-active inputs suppressed"
+      "principle": "input_scheme shared_kb: route KB/mouse to active_player only; HUD legend follows active_player"
     },
     "gameplay_dual_pad": {
-      "principle": "playerIndex maps to joystick id on their turn; Start opens pause"
+      "principle": "input_scheme dual_gamepad: map joystick to player slot on turn; Start opens pause"
     }
   },
   "accessibility": {
-    "contrast": "Light ink on dark void for menus; team IDs textual",
+    "contrast": "Light ink on dark void for menus; team IDs textual (P1/P2 + mole slot)",
     "fontMinSizesPx": { "menuBody": 22, "hudScore": 28 },
     "motion": "Subtle pulse ≤ 1 Hz for primary prompts"
   },
   "recommendations": [
-    "v1: skip heavy character creator; use 'Mole 1–5' + team color",
-    "If performance allows, add subtle parallax on title/menu art pane",
-    "Playtest: bottom HUD height vs low-angle aiming; may raise to y=620–640"
+    "v1: skip heavy character creator; display mole slot index + team color from roster",
+    "Parallax optional on main_menu art pane",
+    "Playtest: bottom HUD y vs low-angle aim; tune weapon strip position"
   ]
 }
 ```
@@ -354,7 +369,7 @@ Document in-options screen; HUD shows subset:
 
 - **Tone:** playful underground — rounded panels, soft shadows, paper texture overlay at 8–12% opacity.
 - **Silhouettes:** chunky moles, oversized weapons readable at 64×64 icon size.
-- **Particles:** keep UI chrome free of heavy particles; confine celebration to `match_summary`.
+- **Particles:** keep UI chrome free of heavy particles; confine celebration to **`game_over` (`match_end`)**.
 
 ---
 
