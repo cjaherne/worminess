@@ -1,9 +1,245 @@
 {
   "version": 2,
   "createdAt": "2026-03-20T17:25:55.952Z",
-  "updatedAt": "2026-03-20T17:25:55.952Z",
-  "gitSha": "c7cc2de6bff4bebc002ff9987cafb0e9dc02018a",
-  "techStack": "Unknown",
-  "files": [],
-  "architectureBrief": "# Architecture Brief\n\nTech stack: Unknown\nFiles: 0\n\n## File Map\n"
+  "updatedAt": "2026-03-20T22:28:20.337Z",
+  "gitSha": "6fb0ef5cf2961700b28ca6c26824ca72f49f5d9c",
+  "techStack": "Node.js",
+  "files": [
+    {
+      "path": "README.md",
+      "lines": 80,
+      "purpose": "Provides an overview and instructions for the Moles game project, including versioning and session loop details."
+    },
+    {
+      "path": "conf.lua",
+      "lines": 13,
+      "purpose": "Configures the LÖVE game settings such as window size, title, and version."
+    },
+    {
+      "path": "main.lua",
+      "lines": 65,
+      "purpose": "Sets up the main game loop and delegates LÖVE callbacks to the app module."
+    },
+    {
+      "path": "package.json",
+      "lines": 10,
+      "purpose": "Defines project metadata and includes a build script for automated checks."
+    },
+    {
+      "path": "spec/damage_spec.lua",
+      "lines": 39,
+      "purpose": "Contains unit tests for the damage mechanics in the game, ensuring correct damage application and friendly fire rules."
+    },
+    {
+      "path": "spec/match_settings_spec.lua",
+      "lines": 42,
+      "purpose": "Tests the match settings module to ensure defaults and validation rules are functioning correctly."
+    },
+    {
+      "path": "spec/mole_spec.lua",
+      "lines": 19,
+      "purpose": "Tests the mole spawning functionality to ensure teams are created correctly with the expected properties."
+    },
+    {
+      "path": "spec/physics_spec.lua",
+      "lines": 38,
+      "purpose": "Tests the physics module to verify terrain collision detection works as intended."
+    },
+    {
+      "path": "spec/session_scores_spec.lua",
+      "lines": 19,
+      "purpose": "Tests the session scores module to ensure match outcomes are recorded accurately."
+    },
+    {
+      "path": "spec/spec_helper.lua",
+      "lines": 74,
+      "purpose": "Provides helper functions and stubs for testing game modules outside of the LÖVE environment."
+    },
+    {
+      "path": "spec/terrain_gen_spec.lua",
+      "lines": 21,
+      "purpose": "Tests the terrain generation module to ensure it produces consistent and valid terrain based on a seed."
+    },
+    {
+      "path": "spec/terrain_spec.lua",
+      "lines": 32,
+      "purpose": "Tests the terrain module to ensure pixel-to-grid mapping and solid cell detection are accurate."
+    },
+    {
+      "path": "spec/timer_spec.lua",
+      "lines": 32,
+      "purpose": "Tests the timer utility to ensure it functions correctly for timing events in the game."
+    },
+    {
+      "path": "spec/turn_state_spec.lua",
+      "lines": 88,
+      "purpose": "Tests the turn state management to ensure player turns are handled correctly."
+    },
+    {
+      "path": "spec/vec2_spec.lua",
+      "lines": 41,
+      "purpose": "Tests the vector utility functions for length calculation and normalization."
+    },
+    {
+      "path": "spec/weapons_registry_spec.lua",
+      "lines": 11,
+      "purpose": "Tests the weapons registry to ensure weapon slots and names are correctly defined."
+    },
+    {
+      "path": "src/app.lua",
+      "lines": 161,
+      "purpose": "Manages the application state, including scene transitions and asset loading."
+    },
+    {
+      "path": "src/audio/sfx.lua",
+      "lines": 60,
+      "purpose": "Handles the creation of procedural sound effects for the game."
+    },
+    {
+      "path": "src/config.defaults.lua",
+      "lines": 37,
+      "purpose": "Defines default configuration settings for the game, including physics and gameplay parameters."
+    },
+    {
+      "path": "src/data/match_settings.lua",
+      "lines": 61,
+      "purpose": "Manages match settings, including defaults and validation for gameplay rules."
+    },
+    {
+      "path": "src/data/session_scores.lua",
+      "lines": 37,
+      "purpose": "Tracks and manages the scores and outcomes of matches played."
+    },
+    {
+      "path": "src/input/gamepad.lua",
+      "lines": 85,
+      "purpose": "Handles input from gamepads, including axis movement and button presses."
+    },
+    {
+      "path": "src/input/input_manager.lua",
+      "lines": 55,
+      "purpose": "Manages input from both keyboard and gamepad, consolidating actions for players."
+    },
+    {
+      "path": "src/input/keyboard_mouse.lua",
+      "lines": 86,
+      "purpose": "Handles input from keyboard and mouse for a shared control scheme for two players."
+    },
+    {
+      "path": "src/render/camera.lua",
+      "lines": 29,
+      "purpose": "Manages the camera's position and movement to follow the active mole in the game."
+    },
+    {
+      "path": "src/render/mole_draw.lua",
+      "lines": 168,
+      "purpose": "Handles the drawing of mole sprites, including shadows and visual effects."
+    },
+    {
+      "path": "src/render/terrain_draw.lua",
+      "lines": 31,
+      "purpose": "Handles the rendering of the terrain based on its properties and state."
+    },
+    {
+      "path": "src/scenes/match_end.lua",
+      "lines": 73,
+      "purpose": "Displays the match end screen, showing scores and allowing players to proceed."
+    },
+    {
+      "path": "src/scenes/match_setup.lua",
+      "lines": 238,
+      "purpose": "Manages the match setup scene, allowing players to configure match settings."
+    },
+    {
+      "path": "src/scenes/menu.lua",
+      "lines": 145,
+      "purpose": "Handles the main menu scene, allowing players to navigate options and start the game."
+    },
+    {
+      "path": "src/scenes/pause.lua",
+      "lines": 148,
+      "purpose": "Game scene module (pause)"
+    },
+    {
+      "path": "src/scenes/play.lua",
+      "lines": 133,
+      "purpose": "Game scene module (play)"
+    },
+    {
+      "path": "src/sim/damage.lua",
+      "lines": 34,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/mole.lua",
+      "lines": 28,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/physics.lua",
+      "lines": 113,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/terrain.lua",
+      "lines": 76,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/terrain_gen.lua",
+      "lines": 131,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/turn_state.lua",
+      "lines": 106,
+      "purpose": "State management"
+    },
+    {
+      "path": "src/sim/weapons/grenade.lua",
+      "lines": 24,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/weapons/registry.lua",
+      "lines": 7,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/weapons/rocket.lua",
+      "lines": 24,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/sim/world.lua",
+      "lines": 263,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/ui/hud.lua",
+      "lines": 282,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/util/gamepad_menu.lua",
+      "lines": 49,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/util/timer.lua",
+      "lines": 30,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/util/vec2.lua",
+      "lines": 35,
+      "purpose": "Source file (.lua)"
+    },
+    {
+      "path": "src/util/viewport.lua",
+      "lines": 26,
+      "purpose": "Source file (.lua)"
+    }
+  ],
+  "architectureBrief": "# Architecture Brief\n\nTech stack: Node.js\nFiles: 47\n\n## File Map\n\n### ./\n- **README.md** (80 lines) — Provides an overview and instructions for the Moles game project, including versioning and session loop details.\n- **conf.lua** (13 lines) — Configures the LÖVE game settings such as window size, title, and version.\n- **main.lua** (65 lines) — Sets up the main game loop and delegates LÖVE callbacks to the app module.\n- **package.json** (10 lines) — Defines project metadata and includes a build script for automated checks.\n\n### spec/\n- **damage_spec.lua** (39 lines) — Contains unit tests for the damage mechanics in the game, ensuring correct damage application and friendly fire rules.\n- **match_settings_spec.lua** (42 lines) — Tests the match settings module to ensure defaults and validation rules are functioning correctly.\n- **mole_spec.lua** (19 lines) — Tests the mole spawning functionality to ensure teams are created correctly with the expected properties.\n- **physics_spec.lua** (38 lines) — Tests the physics module to verify terrain collision detection works as intended.\n- **session_scores_spec.lua** (19 lines) — Tests the session scores module to ensure match outcomes are recorded accurately.\n- **spec_helper.lua** (74 lines) — Provides helper functions and stubs for testing game modules outside of the LÖVE environment.\n- **terrain_gen_spec.lua** (21 lines) — Tests the terrain generation module to ensure it produces consistent and valid terrain based on a seed.\n- **terrain_spec.lua** (32 lines) — Tests the terrain module to ensure pixel-to-grid mapping and solid cell detection are accurate.\n- **timer_spec.lua** (32 lines) — Tests the timer utility to ensure it functions correctly for timing events in the game.\n- **turn_state_spec.lua** (88 lines) — Tests the turn state management to ensure player turns are handled correctly.\n- **vec2_spec.lua** (41 lines) — Tests the vector utility functions for length calculation and normalization.\n- **weapons_registry_spec.lua** (11 lines) — Tests the weapons registry to ensure weapon slots and names are correctly defined.\n\n### src/\n- **app.lua** (161 lines) — Manages the application state, including scene transitions and asset loading.\n- **config.defaults.lua** (37 lines) — Defines default configuration settings for the game, including physics and gameplay parameters.\n\n### src/audio/\n- **sfx.lua** (60 lines) — Handles the creation of procedural sound effects for the game.\n\n### src/data/\n- **match_settings.lua** (61 lines) — Manages match settings, including defaults and validation for gameplay rules.\n- **session_scores.lua** (37 lines) — Tracks and manages the scores and outcomes of matches played.\n\n### src/input/\n- **gamepad.lua** (85 lines) — Handles input from gamepads, including axis movement and button presses.\n- **input_manager.lua** (55 lines) — Manages input from both keyboard and gamepad, consolidating actions for players.\n- **keyboard_mouse.lua** (86 lines) — Handles input from keyboard and mouse for a shared control scheme for two players.\n\n### src/render/\n- **camera.lua** (29 lines) — Manages the camera's position and movement to follow the active mole in the game.\n- **mole_draw.lua** (168 lines) — Handles the drawing of mole sprites, including shadows and visual effects.\n- **terrain_draw.lua** (31 lines) — Handles the rendering of the terrain based on its properties and state.\n\n### src/scenes/\n- **match_end.lua** (73 lines) — Displays the match end screen, showing scores and allowing players to proceed.\n- **match_setup.lua** (238 lines) — Manages the match setup scene, allowing players to configure match settings.\n- **menu.lua** (145 lines) — Handles the main menu scene, allowing players to navigate options and start the game.\n- **pause.lua** (148 lines) — Game scene module (pause)\n- **play.lua** (133 lines) — Game scene module (play)\n\n### src/sim/\n- **damage.lua** (34 lines) — Source file (.lua)\n- **mole.lua** (28 lines) — Source file (.lua)\n- **physics.lua** (113 lines) — Source file (.lua)\n- **terrain.lua** (76 lines) — Source file (.lua)\n- **terrain_gen.lua** (131 lines) — Source file (.lua)\n- **turn_state.lua** (106 lines) — State management\n- **world.lua** (263 lines) — Source file (.lua)\n\n### src/sim/weapons/\n- **grenade.lua** (24 lines) — Source file (.lua)\n- **registry.lua** (7 lines) — Source file (.lua)\n- **rocket.lua** (24 lines) — Source file (.lua)\n\n### src/ui/\n- **hud.lua** (282 lines) — Source file (.lua)\n\n### src/util/\n- **gamepad_menu.lua** (49 lines) — Source file (.lua)\n- **timer.lua** (30 lines) — Source file (.lua)\n- **vec2.lua** (35 lines) — Source file (.lua)\n- **viewport.lua** (26 lines) — Source file (.lua)\n"
 }
