@@ -11,15 +11,12 @@
       "args": [
         "mcp-server-fetch"
       ]
-    }
-  }
-}B_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
     },
-    "fetch": {
-      "command": "uvx",
+    "sequential-thinking": {
+      "command": "npx",
       "args": [
-        "mcp-server-fetch"
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
       ]
     }
   }
