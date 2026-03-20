@@ -1,4 +1,4 @@
---- Main menu: session wins, Local match → play (stub), Options stub, Quit.
+--- Main menu: session wins, Local match → match_setup, Options stub, Quit.
 local theme = require("ui.theme")
 local sfx = require("audio.sfx")
 
