@@ -2,7 +2,7 @@
 
 **Audience:** merge into `DESIGN.md` + Coding Agent blueprint  
 **Framework:** LÖVE **11.4**  
-**Repo baseline:** `REQUIREMENTS.md` (R1–R11); entry via `main.lua` → `app`; existing data hooks `src/data/match_settings.lua`, `src/data/session_scores.lua` (session wins — R6). Full merged spec also lives in root `DESIGN.md`.
+**Repo baseline:** `REQUIREMENTS.md` (R1–R11); entry via `main.lua` → `app`; data `src/data/match_settings.lua`, `src/data/session_scores.lua` (R6); sim layer `src/sim/turn_state.lua`, `terrain.lua`, `terrain_gen.lua`, `physics.lua`, `damage.lua`; tuning `src/config.defaults.lua`. Full merged spec: root `DESIGN.md`.
 
 ---
 
@@ -48,7 +48,7 @@ Traceability: one bullet per distinct requirement from the user task and BigBoss
 
 ### Turn model (players + moles rotation)
 
-**Normative rule:** The **`on_end_turn` / `advance_mole_index` pseudocode block below is authoritative** for turn and mole rotation. Any prose in other pipeline docs (e.g. LÖVE Architect) that implies advancing the **opponent’s** roster when a turn ends, or advancing a roster when a turn **starts**, is **out of date** — implement the pseudocode.
+**Normative rule:** The **`on_end_turn` / `advance_mole_index` pseudocode block below is authoritative** for turn and mole rotation. Any prose in other pipeline docs (e.g. LÖVE Architect) that implies advancing the **opponent’s** roster when a turn ends, or advancing a roster when a turn **starts**, is **out of date** — implement the pseudocode. **Where merged architecture prose (e.g. `DESIGN.md`, LÖVE Architect) disagrees with this Turn Model, this pseudocode overrides it for player/mole rotation; align `src/sim/turn_state.lua` (and callers) to the pseudocode, not the conflicting paragraph.**
 
 **Product intent — symmetric same-slot progression:** Each human alternates as **turn owner**. Each player’s **roster slot index** (1..5) advances **only when that player ends their own turn**, so after a full **player–player cycle** (P1 acts, then P2 acts), **both** teams have stepped forward one **living** mole in lockstep when no asymmetrical deaths have occurred — i.e. both sides stay on the **same slot number** relative to their rosters (both on “slot 2” for their next respective turns, etc.). Deaths desync indices by skipping dead moles per `advance_mole_index`.
 
