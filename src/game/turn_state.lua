@@ -96,6 +96,28 @@ function M.tick_interstitial(ts, dt)
   return false
 end
 
+--- If the active mole died (fall, etc.), pick next living on same team. Returns "ok" | "reassigned" | "team_wiped".
+function M.repair_active_slot(ts, teams)
+  local team = teams[ts.active_player]
+  if not team then
+    return "ok"
+  end
+  local m = team.moles[ts.active_mole_slot]
+  if m and m.alive then
+    return "ok"
+  end
+  local idx = M.next_living_mole_index(team, 1)
+  if idx then
+    ts.active_mole_slot = idx
+    ts.move_budget = require("data.constants").MOVE_BUDGET_MAX
+    ts.power = 0
+    ts.charging = false
+    ts.aim_angle = -math.pi / 2
+    return "reassigned"
+  end
+  return "team_wiped"
+end
+
 M.phases = phases
 
 return M

@@ -17,6 +17,7 @@ end
 local function register()
   love.load = function()
     theme.load_fonts()
+    require("audio.sfx").init()
     session = Session.new()
     sm = scene_manager.new(get_context)
     local boot = require("scenes.boot").new()

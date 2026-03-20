@@ -1,6 +1,7 @@
 --- Full MatchConfig editor, dual Ready, validate → play.
 local theme = require("ui.theme")
 local layout = require("ui.layout")
+local sfx = require("audio.sfx")
 local match_config = require("game.match_config")
 local devices = require("input.devices")
 local C = require("data.constants")
@@ -59,6 +60,7 @@ local function new()
       return
     end
     self.ctx.session.last_match_config = match_config.copy(c)
+    sfx.play("ui", 0.55)
     local play = require("scenes.play").new(c)
     self.ctx.scenes:replace(play)
   end
@@ -242,6 +244,10 @@ local function new()
   end
 
   function self:update(dt)
+    devices.refresh_joysticks()
+  end
+
+  function self:resize(_w, _h)
     devices.refresh_joysticks()
   end
 

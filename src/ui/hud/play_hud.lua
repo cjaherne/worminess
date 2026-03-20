@@ -121,7 +121,7 @@ function M.draw(ctx)
   if scheme == "shared_kb" then
     hint = (ap == 1) and "P1: A/D move · W/S aim · Shift power · Space fire · 1/2 weapon · Mouse aim" or "P2: Arrows move/aim · RShift power · Enter fire · Pad Start pause"
   else
-    hint = "Your turn: stick aim · A fire · bumpers power · Start pause"
+    hint = "Your turn: stick aim · A fire · LB/RB or triggers charge power · Start = pause (any pad)"
   end
   love.graphics.setColor(c.ink[1], c.ink[2], c.ink[3], 0.65)
   love.graphics.printf(hint, 24, 568, lw - 48, "center", 0, 0.68, 0.68)

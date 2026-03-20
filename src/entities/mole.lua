@@ -47,6 +47,10 @@ function M.draw(m, team_color)
     return
   end
   local r = m.radius
+  love.graphics.setColor(0, 0, 0, 0.22)
+  love.graphics.ellipse("fill", m.x, m.y + r * 0.85, r * 1.05, r * 0.38)
+  love.graphics.setColor(team_color[1] * 0.88, team_color[2] * 0.88, team_color[3] * 0.88, 1)
+  love.graphics.circle("fill", m.x, m.y - 1, r * 1.02)
   love.graphics.setColor(team_color[1], team_color[2], team_color[3], 1)
   love.graphics.circle("fill", m.x, m.y, r)
   love.graphics.setColor(0.12, 0.08, 0.12, 0.85)

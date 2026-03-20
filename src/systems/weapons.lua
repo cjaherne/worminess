@@ -46,6 +46,9 @@ function M.try_fire(ctx)
   else
     return false
   end
+  if ctx.feedback and ctx.feedback.on_weapon_fire then
+    ctx.feedback.on_weapon_fire(wid, wx, wy, ang)
+  end
   ts.phase = turn_state.phases.flying
   ts.power = 0
   ts.charging = false

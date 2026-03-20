@@ -57,6 +57,9 @@ local function step_rocket(ctx, p, dt)
     end
     p.pos.x, p.pos.y = nx, ny
   end
+  if not p.dead and ctx.feedback and ctx.feedback.on_rocket_trail then
+    ctx.feedback.on_rocket_trail(p.pos.x, p.pos.y)
+  end
 end
 
 function M.update_projectiles(ctx, dt)

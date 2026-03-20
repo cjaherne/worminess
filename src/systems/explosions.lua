@@ -33,6 +33,9 @@ function M.apply(ctx, wx, wy, weapon_def, owner_team)
       end
     end
   end
+  if ctx.feedback and ctx.feedback.on_explosion then
+    ctx.feedback.on_explosion(wx, wy, weapon_def)
+  end
 end
 
 return M

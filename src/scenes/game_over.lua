@@ -2,6 +2,27 @@
 local theme = require("ui.theme")
 local layout = require("ui.layout")
 
+local function spawn_confetti()
+  local parts = {}
+  local lw, lh = theme.logical_w, theme.logical_h
+  for _ = 1, 52 do
+    parts[#parts + 1] = {
+      x = love.math.random(20, lw - 20),
+      y = love.math.random(-40, lh * 0.35),
+      vx = love.math.random(-95, 95),
+      vy = love.math.random(-120, -20),
+      ay = 340 + love.math.random(0, 120),
+      rot = love.math.random() * 6.28,
+      vr = love.math.random(-5, 5),
+      s = love.math.random(5, 10),
+      hue = love.math.random(),
+      life = love.math.random(90, 170) / 100,
+      t = 0,
+    }
+  end
+  return parts
+end
+
 local function new(opts)
   opts = opts or {}
   local self = {
@@ -14,11 +35,30 @@ local function new(opts)
     on_new_setup = opts.on_new_setup,
     on_menu = opts.on_menu,
     focus = 1,
+    confetti = nil,
   }
 
   function self:enter(ctx)
     self.ctx = ctx
     self.focus = 1
+    if self.variant == "match_end" then
+      self.confetti = spawn_confetti()
+    else
+      self.confetti = nil
+    end
+  end
+
+  function self:update(dt)
+    if not self.confetti then
+      return
+    end
+    for _, p in ipairs(self.confetti) do
+      p.t = p.t + dt
+      p.vy = p.vy + p.ay * dt
+      p.x = p.x + p.vx * dt
+      p.y = p.y + p.vy * dt
+      p.rot = p.rot + p.vr * dt
+    end
   end
 
   local function n_items()
@@ -92,6 +132,19 @@ local function new(opts)
 
   function self:draw()
     local c = theme.colors
+    if self.confetti then
+      for _, p in ipairs(self.confetti) do
+        local k = math.min(1, p.t / p.life)
+        local r = 0.55 + 0.45 * math.sin(p.hue * 8 + p.t * 3)
+        love.graphics.push()
+        love.graphics.translate(p.x, p.y)
+        love.graphics.rotate(p.rot)
+        love.graphics.setColor(r, 0.72, 0.95, 0.8 * (1 - k))
+        love.graphics.rectangle("fill", -p.s * 0.5, -p.s * 0.5, p.s, p.s, 2, 2)
+        love.graphics.pop()
+      end
+    end
+
     love.graphics.setColor(0, 0, 0, 0.5)
     love.graphics.rectangle("fill", 0, 0, theme.logical_w, theme.logical_h)
 

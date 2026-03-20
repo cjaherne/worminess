@@ -1,5 +1,6 @@
 --- Main menu: session wins, Local match → play (stub), Options stub, Quit.
 local theme = require("ui.theme")
+local sfx = require("audio.sfx")
 
 local ITEM_LOCAL = 1
 local ITEM_OPTIONS = 2
@@ -25,6 +26,7 @@ local function new()
 
   local function confirm(self)
     if self.focus == ITEM_LOCAL then
+      sfx.play("ui", 0.5)
       local ms = require("scenes.match_setup").new()
       self.ctx.scenes:replace(ms)
     elseif self.focus == ITEM_OPTIONS then
