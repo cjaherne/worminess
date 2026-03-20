@@ -53,12 +53,14 @@ function M:active_mole(moles)
   return nil
 end
 
+--- Walk ring at least one step (next_index_in_ring), then until living (Designer pseudocode).
 function M:advance_after_turn(moles)
   local p = self.active_player
   local cur = self.mole_slot[p]
+  local idx = cur
   local chosen = nil
-  for k = 1, 5 do
-    local idx = ((cur - 1 + k) % 5) + 1
+  for _ = 1, 5 do
+    idx = (idx % 5) + 1
     for _, m in ipairs(moles) do
       if m.player == p and m.slot == idx and m.alive then
         chosen = idx
