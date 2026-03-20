@@ -1,6 +1,0 @@
-{
-  "name": "moles",
-  "version": "0.1.2",
-  "private": true,
-  "description": "Local 2-player Worms-style artillery (LÖVE / Lua)"
-}
