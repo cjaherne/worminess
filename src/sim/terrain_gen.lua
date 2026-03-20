@@ -68,9 +68,10 @@ end
 
 local function flat_run(terrain, gx0, gx1)
   local y0 = surface_y(terrain, gx0)
+  local tol = math.max(terrain.cell * 12, 64)
   local ok = true
   for gx = gx0, gx1 do
-    if math.abs(surface_y(terrain, gx) - y0) > terrain.cell * 1.5 then
+    if math.abs(surface_y(terrain, gx) - y0) > tol then
       ok = false
       break
     end
@@ -81,7 +82,7 @@ end
 local function find_spawns(terrain, gx0, gx1, count, mole_r)
   local ok, base_y = flat_run(terrain, gx0, gx1)
   if not ok then return nil end
-  local w = (gx1 - gx0) * terrain.cell
+  local w = (gx1 - gx0 + 1) * terrain.cell
   local step = w / (count + 1)
   local out = {}
   for i = 1, count do
@@ -113,8 +114,12 @@ function M.build(seed, gw, gh, cell, mole_r, max_retries)
       return y >= surface_row
     end
     local tr = Terrain.new(cell, gw, gh, solid_at)
-    local left = find_spawns(tr, 8, math.floor(gw * 0.28), 5, mole_r)
-    local right = find_spawns(tr, math.ceil(gw * 0.72), gw - 8, 5, mole_r)
+    -- Narrow bands: `flat_run` requires uniform surface height across the whole span; a ~28% slice
+    -- of the map is too wide for typical rolling heightfields and caused endless build failures.
+    local band = math.max(14, math.min(32, math.floor(gw * 0.05)))
+    local left = find_spawns(tr, 8, 8 + band - 1, 5, mole_r)
+    local gx_right0 = gw - 8 - band + 1
+    local right = find_spawns(tr, gx_right0, gw - 8, 5, mole_r)
     if left and right then
       return { terrain = tr, spawns_p1 = left, spawns_p2 = right, seed_used = s }
     end

@@ -35,9 +35,18 @@ end
 function M:sync_slots_to_living(moles)
   for p = 1, 2 do
     local s = self.mole_slot[p]
-    if not self:alive_slot_for_player(moles, p, s) then
-      local any = self:alive_slot_for_player(moles, p, 1)
-      if any then self.mole_slot[p] = any end
+    local ok = false
+    for _, m in ipairs(moles) do
+      if m.player == p and m.slot == s and m.alive then
+        ok = true
+        break
+      end
+    end
+    if not ok then
+      local any = self:alive_slot_for_player(moles, p, s)
+      if any then
+        self.mole_slot[p] = any
+      end
     end
   end
 end

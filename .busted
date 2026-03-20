@@ -1,0 +1,7 @@
+return {
+  default = {
+    helper = "spec/spec_helper.lua",
+    -- Shared package.* so spec_helper can register loaders/preload for LÖVE-style module paths
+    ["auto-insulate"] = false,
+  },
+}

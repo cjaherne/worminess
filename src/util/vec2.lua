@@ -25,7 +25,10 @@ function M.scale(x, y, s)
 end
 
 function M.angle_to(dx, dy)
-  return math.atan2(dy, dx)
+  if math.atan2 then
+    return math.atan2(dy, dx)
+  end
+  return math.atan(dy, dx)
 end
 
 return M

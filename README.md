@@ -23,6 +23,10 @@ love .
 
 On Windows, you can drag the project folder onto `love.exe` or set `love` on your PATH.
 
+## Tests
+
+Lua unit tests use **busted** (`spec/`, `spec/spec_helper.lua`, `.busted`). See **[TESTING.md](./TESTING.md)** for install notes and the exact command used on Windows (Lua 5.4 + LuaRocks paths).
+
 ## Controls
 
 ### Shared keyboard + mouse
