@@ -1,12 +1,15 @@
 ## Deviations
 
-- **Main menu → play:** For sub-task 1 (boot / main menu / play only), **Local match** goes straight to the **play** shell. Unified `DESIGN.md` user flow is **main_menu → match_setup → play**; `match_setup` should be inserted when that scene is implemented so `match_config.validate` and dual Ready run before a real match.
-- **Automated run check:** A short headless run was not reliable from this environment (windowed `love .` was started then stopped). Syntax and wiring were reviewed statically; please run `love .` locally once to confirm.
+- **Turn timer expiry:** When the turn clock hits zero, the active mole auto-fires with at least **0.35** power (and current charge if higher). The design mentioned documenting auto-end policy in UI; this behaviour is implemented but not surfaced as a separate tooltip beyond the timer label.
+- **Shared keyboard + gamepad mix:** In **`shared_kb`** mode, only keyboard/mouse routing is guaranteed for both players per spec. Gamepads are not additionally merged into shared mode (dual mode uses **`dual_gamepad`** exclusively).
+- **Round toast vs turn:** The full-width interstitial toast runs at **each round start** (after mapgen). **Individual turns** after `advance_turn` go straight to **aim** without a second toast, to keep pacing snappy.
 
 ## Issues Found
 
-- None in `DESIGN.md` for this slice.
+- None blocking for this slice; confirm with playtests whether knockback strength (`explosions.apply` impulse scaling) needs tuning relative to `weapons.lua` values.
 
 ## Suggestions
 
-- When **match_setup** lands, replace the direct **main_menu → play** transition and keep **play** as the sole owner of match runtime (per architect checklist).
+- Add a tiny on-screen legend in **match_setup** for gamepad **X/Y** ready chips (already in footer for keys **1/2**).
+- Consider sub-stepping grenades the same way as rockets if high-speed tunnels appear.
+- Optional: persist session stats with `love.filesystem` (design v1 is RAM-only).

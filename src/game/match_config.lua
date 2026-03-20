@@ -29,4 +29,20 @@ function M.validate(c)
   return c
 end
 
+function M.copy(c)
+  return {
+    mole_max_hp = c.mole_max_hp,
+    rounds_to_win = c.rounds_to_win,
+    wind_strength = c.wind_strength,
+    grenade_fuse_seconds = c.grenade_fuse_seconds,
+    turn_time_limit = c.turn_time_limit,
+    friendly_fire = c.friendly_fire,
+    procedural_seed = c.procedural_seed,
+    map_width = c.map_width,
+    map_height = c.map_height,
+    teams_per_player = c.teams_per_player,
+    input_scheme = c.input_scheme,
+  }
+end
+
 return M

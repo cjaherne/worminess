@@ -19,7 +19,17 @@ function M.new()
     charging = false,
     weapon_index = 1,
     weapons = { "rocket", "grenade" },
+    interstitial_t = 0,
+    turn_time_left = nil,
   }
+end
+
+function M.active_mole(ts, teams)
+  local team = teams[ts.active_player]
+  if not team then
+    return nil
+  end
+  return team.moles[ts.active_mole_slot]
 end
 
 function M.current_weapon_id(ts)
@@ -51,6 +61,7 @@ function M.advance_turn(ts, teams, starting_slot_team1, starting_slot_team2)
   ts.power = 0
   ts.charging = false
   ts.aim_angle = -math.pi / 2
+  ts.interstitial_t = 0
 end
 
 function M.start_match_turn(ts, teams, starting_player, mole_slot_team1, mole_slot_team2)
@@ -64,6 +75,25 @@ function M.start_match_turn(ts, teams, starting_player, mole_slot_team1, mole_sl
   ts.power = 0
   ts.charging = false
   ts.aim_angle = -math.pi / 2
+  ts.interstitial_t = 0
+end
+
+function M.begin_interstitial(ts, duration)
+  ts.phase = phases.interstitial
+  ts.interstitial_t = duration or 1.5
+end
+
+function M.tick_interstitial(ts, dt)
+  if ts.phase ~= phases.interstitial then
+    return false
+  end
+  ts.interstitial_t = ts.interstitial_t - dt
+  if ts.interstitial_t <= 0 then
+    ts.interstitial_t = 0
+    ts.phase = phases.aim
+    return true
+  end
+  return false
 end
 
 M.phases = phases

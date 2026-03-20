@@ -17,6 +17,15 @@ M.safe_margin = 24
 M.logical_w = constants.WORLD_W
 M.logical_h = constants.WORLD_H
 
+M.font_body = nil
+M.font_hud = nil
+
+function M.load_fonts()
+  M.font_body = love.graphics.newFont(22)
+  M.font_hud = love.graphics.newFont(28)
+  love.graphics.setFont(M.font_body)
+end
+
 function M.begin_draw()
   local dw, dh = love.graphics.getDimensions()
   local lw, lh = M.logical_w, M.logical_h

@@ -46,4 +46,29 @@ function M.all_moles(teams)
   return out
 end
 
+--- Next index into mole_order (1..#order) after mole_idx fired.
+function M.next_order_slot_after_mole(team, mole_idx)
+  local order = team.mole_order
+  for i = 1, #order do
+    if order[i] == mole_idx then
+      return (i % #order) + 1
+    end
+  end
+  return 1
+end
+
+function M.place_team_from_spawns(team, spawn_list, max_hp)
+  for i = 1, #team.moles do
+    local m = team.moles[i]
+    local sp = spawn_list[i]
+    if sp then
+      m.x, m.y = sp.x, sp.y
+    end
+    m.max_hp = max_hp
+    m.hp = max_hp
+    m.alive = true
+    m.vx, m.vy = 0, 0
+  end
+end
+
 return M

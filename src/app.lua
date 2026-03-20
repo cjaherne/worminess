@@ -16,6 +16,7 @@ end
 
 local function register()
   love.load = function()
+    theme.load_fonts()
     session = Session.new()
     sm = scene_manager.new(get_context)
     local boot = require("scenes.boot").new()
@@ -68,6 +69,16 @@ local function register()
 
   love.wheelmoved = function(x, y)
     sm:wheelmoved(x, y)
+  end
+
+  love.joystickadded = function(_joystick)
+    local devices = require("input.devices")
+    devices.refresh_joysticks()
+  end
+
+  love.joystickremoved = function(_joystick)
+    local devices = require("input.devices")
+    devices.refresh_joysticks()
   end
 end
 

@@ -25,8 +25,8 @@ local function new()
 
   local function confirm(self)
     if self.focus == ITEM_LOCAL then
-      local play = require("scenes.play").new()
-      self.ctx.scenes:replace(play)
+      local ms = require("scenes.match_setup").new()
+      self.ctx.scenes:replace(ms)
     elseif self.focus == ITEM_OPTIONS then
       self.options_toast_t = 2.5
     elseif self.focus == ITEM_QUIT then

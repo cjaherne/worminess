@@ -34,4 +34,25 @@ function M.damage(m, amount, friendly_fire, attacker_team)
   end
 end
 
+function M.apply_impulse(m, ix, iy)
+  if not m.alive then
+    return
+  end
+  m.vx = m.vx + ix
+  m.vy = m.vy + iy
+end
+
+function M.draw(m, team_color)
+  if not m.alive then
+    return
+  end
+  local r = m.radius
+  love.graphics.setColor(team_color[1], team_color[2], team_color[3], 1)
+  love.graphics.circle("fill", m.x, m.y, r)
+  love.graphics.setColor(0.12, 0.08, 0.12, 0.85)
+  love.graphics.circle("line", m.x, m.y, r)
+  love.graphics.setColor(0.95, 0.9, 0.85, 1)
+  love.graphics.printf(tostring(m.index), m.x - r, m.y - 6, r * 2, "center", 0, 0.65, 0.65)
+end
+
 return M
